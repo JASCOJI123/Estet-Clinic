@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Estet Clinic — Soch ekish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --bg-soft:#F6F7F3;
+    --ink:#14181A;
+    --ink-muted:#767D78;
+    --forest:#1B4332;
+    --forest-light:#2F6F4E;
+    --gold:#B08D57;
+    --line:#E7E5DE;
+    --radius:20px;
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Manrope',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-top:var(--safe-top);
+    padding-bottom:var(--safe-bottom);
+    overflow-x:hidden;
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:0 22px;}
+  @media (min-width:640px){ .wrap{max-width:620px;} }
+
+  h1,h2,h3,.display{font-family:'Unbounded',sans-serif;letter-spacing:-0.01em;}
+
+  a{color:inherit;text-decoration:none;}
+
+  /* ---------- NAV ---------- */
+  .nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 0 8px;
+  }
+  .brand{display:flex;align-items:center;gap:9px;font-family:'Unbounded',sans-serif;font-weight:600;font-size:15px;}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--forest);}
+  .nav-lang{font-size:12px;color:var(--ink-muted);border:1px solid var(--line);border-radius:100px;padding:6px 12px;}
+
+  /* ---------- HERO ---------- */
+  .hero{position:relative;padding-top:22px;}
+  .hero-canvas-holder{
+    position:absolute; inset:-40px -22px auto -22px; height:340px;
+    z-index:0; pointer-events:none;
+  }
+  #heroCanvas{width:100%;height:100%;display:block;}
+  .hero-content{position:relative;z-index:1;padding-top:236px;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--forest); font-weight:700;
+    background:rgba(27,67,50,0.06); border:1px solid rgba(27,67,50,0.14);
+    padding:7px 13px;border-radius:100px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);}
+  h1.hero-title{
+    font-size:34px;line-height:1.1;font-weight:800;margin-top:18px;
+  }
+  h1.hero-title em{
+    font-style:normal; color:var(--forest);
+    background:linear-gradient(180deg, transparent 62%, rgba(176,141,87,.28) 62%);
+  }
+  .hero-sub{
+    margin-top:16px;font-size:15.5px;line-height:1.6;color:var(--ink-muted);
+    max-width:38ch;
+  }
+  .hero-actions{display:flex;flex-direction:column;gap:12px;margin-top:26px;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:15px 22px;border-radius:100px;font-family:'Manrope',sans-serif;
+    font-weight:700;font-size:14.5px;border:none;cursor:pointer;
+    transition:transform .15s ease, box-shadow .2s ease;
+    width:100%;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--forest);color:#fff;box-shadow:0 10px 24px -8px rgba(27,67,50,.55);}
+  .btn-secondary{background:transparent;color:var(--ink);border:1.5px solid var(--line);}
+  .btn svg{width:16px;height:16px;flex-shrink:0;}
+
+  .stat-row{display:flex;gap:22px;margin-top:30px;padding-top:22px;border-top:1px solid var(--line);}
+  .stat b{display:block;font-family:'Unbounded',sans-serif;font-size:20px;color:var(--forest);}
+  .stat span{display:block;font-size:11.5px;color:var(--ink-muted);margin-top:4px;line-height:1.3;}
+
+  /* ---------- SECTION HEADERS ---------- */
+  .section{padding:64px 0 8px;}
+  .section-head{margin-bottom:26px;}
+  .section-eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:800;}
+  .section-title{font-size:24px;font-weight:800;margin-top:10px;line-height:1.25;}
+  .section-desc{font-size:14.5px;color:var(--ink-muted);margin-top:10px;line-height:1.6;}
+
+  /* ---------- PACKAGES ---------- */
+  .packages{display:flex;flex-direction:column;gap:16px;}
+  @media (min-width:640px){ .packages{display:grid;grid-template-columns:1fr 1fr;} }
+  .card{
+    border:1.5px solid var(--line);border-radius:var(--radius);
+    padding:24px;position:relative;overflow:hidden;background:var(--bg);
+    transition:border-color .2s ease, transform .2s ease;
+  }
+  .card.is-max{border-color:var(--forest);background:linear-gradient(180deg,#fff, var(--bg-soft));}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .card-name{font-family:'Unbounded',sans-serif;font-weight:600;font-size:15px;}
+  .card-grafts{font-size:12px;color:var(--ink-muted);margin-top:4px;}
+  .card-price{font-family:'Unbounded',sans-serif;font-weight:800;font-size:26px;color:var(--forest);white-space:nowrap;}
+  .card-feats{list-style:none;margin-top:18px;display:flex;flex-direction:column;gap:10px;}
+  .card-feats li{display:flex;align-items:flex-start;gap:9px;font-size:13.5px;line-height:1.45;}
+  .card-feats li svg{width:16px;height:16px;flex-shrink:0;margin-top:1px;}
+  .feat-yes{color:var(--ink);}
+  .feat-yes svg{color:var(--forest);}
+  .feat-no{color:var(--ink-muted);}
+  .feat-no svg{color:#C7CBC8;}
+  .card-cta{
+    margin-top:20px;width:100%;padding:12px;border-radius:100px;
+    border:1.5px solid var(--ink); background:transparent; color:var(--ink);
+    font-family:'Manrope',sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;
+  }
+  .card.is-max .card-cta{background:var(--forest);border-color:var(--forest);color:#fff;}
+  .badge{
+    position:absolute;top:0;right:0;background:var(--gold);color:#fff;
+    font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    padding:6px 14px;border-radius:0 0 0 14px;
+  }
+
+  /* ---------- STEPS ---------- */
+  .steps{display:flex;flex-direction:column;gap:0;}
+  .step{display:flex;gap:16px;padding:18px 0;border-bottom:1px solid var(--line);}
+  .step:last-child{border-bottom:none;}
+  .step-num{
+    font-family:'Unbounded',sans-serif;font-weight:800;font-size:13px;color:var(--forest);
+    width:34px;height:34px;border-radius:50%;border:1.5px solid var(--forest);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .step-title{font-weight:700;font-size:14.5px;}
+  .step-desc{font-size:13px;color:var(--ink-muted);margin-top:4px;line-height:1.5;}
+
+  /* ---------- TRUST STRIP ---------- */
+  .trust{
+    display:flex;gap:14px;overflow-x:auto;padding:4px 0 10px;
+    scrollbar-width:none;
+  }
+  .trust::-webkit-scrollbar{display:none;}
+  .trust-item{
+    flex:0 0 auto;background:var(--bg-soft);border-radius:14px;padding:14px 18px;
+    font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:8px;white-space:nowrap;
+  }
+  .trust-item svg{width:15px;height:15px;color:var(--forest);}
+
+  /* ---------- CONTACT / FOOTER ---------- */
+  .contact-card{
+    background:var(--forest);color:#fff;border-radius:24px;padding:30px 24px;margin-top:10px;
+    position:relative;overflow:hidden;
+  }
+  .contact-card::before{
+    content:"";position:absolute;width:220px;height:220px;border-radius:50%;
+    background:radial-gradient(circle, rgba(176,141,87,.35), transparent 70%);
+    top:-90px;right:-70px;
+  }
+  .contact-title{font-family:'Unbounded',sans-serif;font-size:19px;font-weight:700;position:relative;}
+  .contact-desc{font-size:13.5px;opacity:.8;margin-top:8px;line-height:1.55;position:relative;max-width:34ch;}
+  .contact-phones{display:flex;flex-direction:column;gap:8px;margin-top:20px;position:relative;}
+  .contact-phones a{font-size:15px;font-weight:700;display:flex;align-items:center;gap:9px;}
+  .contact-phones svg{width:16px;height:16px;color:var(--gold);}
+  .contact-card .btn{margin-top:22px;position:relative;}
+  .contact-card .btn-primary{background:#fff;color:var(--forest);box-shadow:none;}
+
+  footer{padding:26px 0 34px;text-align:center;}
+  footer p{font-size:11.5px;color:var(--ink-muted);}
+
+  .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease, transform .6s ease;}
+  .reveal.is-visible{opacity:1;transform:translateY(0);}
+
+  @media (prefers-reduced-motion: reduce){
+    .reveal{transition:none;opacity:1;transform:none;}
+    html{scroll-behavior:auto;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <nav class="nav">
+    <div class="brand"><span class="dot"></span>ESTET CLINIC</div>
+    <div class="nav-lang">UZ</div>
+  </nav>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="hero-canvas-holder"><canvas id="heroCanvas"></canvas></div>
+    <div class="hero-content">
+      <span class="eyebrow"><span class="dot"></span>Estetik va plastik jarrohlik markazi</span>
+      <h1 class="hero-title">Sochingizni <em>qaytadan</em><br>tabiiy tarzda tiklang</h1>
+      <p class="hero-sub">Zamonaviy graft texnologiyasi, umrlik kafolat sertifikati va bepul konsultatsiya — Estet Clinic bilan ishonchli natija.</p>
+
+      <div class="hero-actions">
+        <button class="btn btn-primary" onclick="ctaAction('consultation')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg>
+          Bepul konsultatsiya olish
+        </button>
+        <a href="#packages" class="btn btn-secondary">Paketlarni ko'rish</a>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><b>700$</b><span>dan boshlanadi</span></div>
+        <div class="stat"><b>1 yil</b><span>bepul konsultatsiya</span></div>
+        <div class="stat"><b>∞</b><span>umrlik kafolat</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TRUST STRIP ================= -->
+  <div class="trust reveal">
+    <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Umrlik kafolat</div>
+    <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Malakali jarrohlar</div>
+    <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Og'riqsiz jarayon</div>
+    <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Laboratoriya nazorati</div>
+  </div>
+
+  <!-- ================= PACKAGES ================= -->
+  <section class="section" id="packages">
+    <div class="section-head reveal">
+      <span class="section-eyebrow">Paketlar</span>
+      <h2 class="section-title">Sizga mos rejani tanlang</h2>
+      <p class="section-desc">Aniq graft soni bepul konsultatsiyada shifokor tomonidan belgilanadi. Quyidagi narxlar taxminiy oraliqdir.</p>
+    </div>
+
+    <div class="packages">
+
+      <div class="card reveal">
+        <div class="card-top">
+          <div><div class="card-name">Minimum</div><div class="card-grafts">2.000–2.500 graft</div></div>
+          <div class="card-price">700$</div>
+        </div>
+        <ul class="card-feats">
+          <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>1 kunlik bepul mehmonxona</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>2 seans plazmoterapiya</li>
+          <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Laboratoriya analizlari</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 yillik bepul konsultatsiya</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Umrlik kafolat sertifikati</li>
+        </ul>
+        <button class="card-cta" onclick="ctaAction('package_minimum')">Shu paketni tanlash</button>
+      </div>
+
+      <div class="card reveal">
+        <div class="card-top">
+          <div><div class="card-name">Medium</div><div class="card-grafts">2.600–3.500 graft</div></div>
+          <div class="card-price">900$</div>
+        </div>
+        <ul class="card-feats">
+          <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>1 kunlik bepul mehmonxona</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>2 seans plazmoterapiya</li>
+          <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Laboratoriya analizlari</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 yillik bepul konsultatsiya</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Umrlik kafolat sertifikati</li>
+        </ul>
+        <button class="card-cta" onclick="ctaAction('package_medium')">Shu paketni tanlash</button>
+      </div>
+
+      <div class="card is-max reveal">
+        <span class="badge">Optimal</span>
+        <div class="card-top">
+          <div><div class="card-name">Maximum</div><div class="card-grafts">3.600–4.500 graft</div></div>
+          <div class="card-price">1100$</div>
+        </div>
+        <ul class="card-feats">
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 kunlik bepul mehmonxona</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>3 seans plazmoterapiya</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Laboratoriya analizlari</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 yillik bepul konsultatsiya</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Umrlik kafolat sertifikati</li>
+        </ul>
+        <button class="card-cta" onclick="ctaAction('package_maximum')">Shu paketni tanlash</button>
+      </div>
+
+      <div class="card reveal">
+        <div class="card-top">
+          <div><div class="card-name">Maximum+</div><div class="card-grafts">4.600–6.000 graft</div></div>
+          <div class="card-price">1300$</div>
+        </div>
+        <ul class="card-feats">
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 kunlik bepul mehmonxona</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>3 seans plazmoterapiya</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Laboratoriya analizlari</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 yillik bepul konsultatsiya</li>
+          <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Umrlik kafolat sertifikati</li>
+        </ul>
+        <button class="card-cta" onclick="ctaAction('package_maximum_plus')">Shu paketni tanlash</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= STEPS ================= -->
+  <section class="section">
+    <div class="section-head reveal">
+      <span class="section-eyebrow">Jarayon</span>
+      <h2 class="section-title">4 bosqichda yangi soch</h2>
+    </div>
+    <div class="steps reveal">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div><div class="step-title">Bepul konsultatsiya</div><div class="step-desc">Shifokor holatingizni ko'rib chiqadi va aniq graft sonini belgilaydi.</div></div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div><div class="step-title">Reja va sana</div><div class="step-desc">Sizga mos paket va operatsiya sanasi kelishiladi.</div></div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div><div class="step-title">Operatsiya</div><div class="step-desc">Zamonaviy usulda, og'riqsiz va bir kunlik jarayon.</div></div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div><div class="step-title">Kuzatuv va natija</div><div class="step-desc">1 yil davomida bepul konsultatsiya va umrlik kafolat.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CONTACT ================= -->
+  <section class="section" id="contact">
+    <div class="contact-card reveal">
+      <div class="contact-title">Bepul konsultatsiyaga yoziling</div>
+      <p class="contact-desc">Mutaxassisimiz siz bilan bog'lanib, barcha savollaringizga javob beradi.</p>
+      <div class="contact-phones">
+        <a href="tel:+998973080999"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+998 97 308-09-99</a>
+        <a href="tel:+998973009019"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+998 97 300-90-19</a>
+      </div>
+      <button class="btn btn-primary" onclick="ctaAction('consultation')">Botga xabar yuborish</button>
+    </div>
+  </section>
+
+  <footer><p>© Estet Clinic — Estetik va plastik jarrohlik markazi</p></footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+  // ---------- Telegram Mini App bootstrap ----------
+  const tg = window.Telegram ? window.Telegram.WebApp : null;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    try { tg.setHeaderColor('#ffffff'); tg.setBackgroundColor('#ffffff'); } catch(e){}
+  }
+  function ctaAction(action){
+    if (tg && tg.sendData) {
+      tg.sendData(JSON.stringify({ action }));
+      tg.close();
+    } else {
+      document.getElementById('contact').scrollIntoView({behavior:'smooth'});
+    }
+  }
+
+  // ---------- Scroll reveal ----------
+  const reveals = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('is-visible'); io.unobserve(e.target); } });
+  }, {threshold:.15});
+  reveals.forEach(el=>io.observe(el));
+
+  // ---------- Hero 3D graft-constellation ----------
+  (function(){
+    const canvas = document.getElementById('heroCanvas');
+    if (!canvas || !window.THREE) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const holder = canvas.parentElement;
+    let w = holder.clientWidth, h = holder.clientHeight;
+
+    const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setSize(w,h);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, w/h, 0.1, 100);
+    camera.position.set(0,0,7.5);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    // Fibonacci sphere point distribution
+    const COUNT = 190;
+    const radius = 2.4;
+    const positions = [];
+    const colors = [];
+    const forest = new THREE.Color(0x1B4332);
+    const gold = new THREE.Color(0xB08D57);
+    const golden = Math.PI * (3 - Math.sqrt(5));
+
+    for (let i=0;i<COUNT;i++){
+      const y = 1 - (i/(COUNT-1))*2;
+      const r = Math.sqrt(1-y*y);
+      const theta = golden*i;
+      const x = Math.cos(theta)*r;
+      const z = Math.sin(theta)*r;
+      positions.push(x*radius, y*radius, z*radius);
+      const c = (i % 9 === 0) ? gold : forest;
+      colors.push(c.r,c.g,c.b);
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors,3));
+    const mat = new THREE.PointsMaterial({size:0.075, vertexColors:true, sizeAttenuation:true, transparent:true, opacity:0.95});
+    const points = new THREE.Points(geo, mat);
+    group.add(points);
+
+    // constellation lines between nearby points (computed once)
+    const linePositions = [];
+    const threshold = 0.62;
+    for (let i=0;i<COUNT;i++){
+      for (let j=i+1;j<COUNT;j++){
+        const dx = positions[i*3]-positions[j*3];
+        const dy = positions[i*3+1]-positions[j*3+1];
+        const dz = positions[i*3+2]-positions[j*3+2];
+        const d = Math.sqrt(dx*dx+dy*dy+dz*dz);
+        if (d < threshold){
+          linePositions.push(positions[i*3],positions[i*3+1],positions[i*3+2]);
+          linePositions.push(positions[j*3],positions[j*3+1],positions[j*3+2]);
+        }
+      }
+    }
+    const lineGeo = new THREE.BufferGeometry();
+    lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions,3));
+    const lineMat = new THREE.LineBasicMaterial({color:0x1B4332, transparent:true, opacity:0.08});
+    const lines = new THREE.LineSegments(lineGeo, lineMat);
+    group.add(lines);
+
+    group.rotation.x = 0.3;
+
+    let targetRotY = 0, targetRotX = 0.3;
+    window.addEventListener('pointermove', (e)=>{
+      const nx = (e.clientX / window.innerWidth) - 0.5;
+      const ny = (e.clientY / window.innerHeight) - 0.5;
+      targetRotY = nx * 0.6;
+      targetRotX = 0.3 + ny * 0.3;
+    });
+
+    function onResize(){
+      w = holder.clientWidth; h = holder.clientHeight;
+      renderer.setSize(w,h);
+      camera.aspect = w/h;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', onResize);
+
+    let t = 0;
+    function animate(){
+      requestAnimationFrame(animate);
+      if (!reduceMotion){
+        t += 0.0035;
+        group.rotation.y += (targetRotY + t - group.rotation.y) * 0.02;
+        group.rotation.x += (targetRotX - group.rotation.x) * 0.04;
+      }
+      renderer.render(scene, camera);
+    }
+    animate();
+  })();
+</script>
+</body>
+</html>
