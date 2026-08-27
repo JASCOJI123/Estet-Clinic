@@ -1,4 +1,5 @@
 aiogram==3.13.1
-anthropic==0.34.2
+groq==0.11.0
 gspread==6.1.2
 google-auth==2.34.0
+aiohttp==3.10.10
