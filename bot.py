@@ -53,7 +53,8 @@ def init_db():
             started_at TEXT,
             last_message_at TEXT,
             lead_sent INTEGER DEFAULT 0,
-            followup_sent INTEGER DEFAULT 0
+            followup_sent INTEGER DEFAULT 0,
+            referred_by INTEGER
         )
     """)
     c.execute("""
@@ -62,13 +63,124 @@ def init_db():
             user_id INTEGER,
             username TEXT,
             info TEXT,
+            source TEXT,
             created_at TEXT
         )
     """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS registrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT, phone TEXT, birth TEXT, address TEXT,
+            passport TEXT, package TEXT, note TEXT,
+            operation_date TEXT,
+            created_at TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS package_interest (
+            package TEXT, date TEXT, count INTEGER DEFAULT 0,
+            PRIMARY KEY (package, date)
+        )
+    """)
+    c.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)")
+    # Eski bazalarda yo'q ustunlarni xavfsiz qo'shish (migratsiya)
+    for alter_sql in [
+        "ALTER TABLE users ADD COLUMN referred_by INTEGER",
+        "ALTER TABLE leads ADD COLUMN source TEXT",
+    ]:
+        try:
+            c.execute(alter_sql)
+        except sqlite3.OperationalError:
+            pass  # ustun allaqachon mavjud
     conn.commit()
     conn.close()
 
-def touch_user(user_id: int, username: str, lang: str = None):
+def get_meta(key: str):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT value FROM meta WHERE key=?", (key,))
+    row = c.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+def set_meta(key: str, value: str):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT INTO meta (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, value))
+    conn.commit()
+    conn.close()
+
+def get_referrer(user_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT referred_by FROM users WHERE user_id=?", (user_id,))
+    row = c.fetchone()
+    conn.close()
+    return row[0] if row and row[0] else None
+
+def track_package_interest(package: str):
+    today = datetime.now().strftime("%Y-%m-%d")
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO package_interest (package, date, count) VALUES (?,?,1)
+        ON CONFLICT(package, date) DO UPDATE SET count = count + 1
+    """, (package, today))
+    conn.commit()
+    conn.close()
+
+def save_registration(name, phone, birth, address, passport, package, note, operation_date):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO registrations (name, phone, birth, address, passport, package, note, operation_date, created_at)
+        VALUES (?,?,?,?,?,?,?,?,?)
+    """, (name, phone, birth, address, passport, package, note, operation_date, datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+
+def get_operations_due_today():
+    """Amaliyotdan 3, 7 yoki 30 kun o'tgan mijozlarni topadi (kuzatuv qo'ng'irog'i uchun)."""
+    now_tashkent = datetime.utcnow() + timedelta(hours=5)
+    today = now_tashkent.date()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT name, phone, operation_date FROM registrations WHERE operation_date IS NOT NULL AND operation_date != ''")
+    rows = c.fetchall()
+    conn.close()
+    due = []
+    for name, phone, op_date_str in rows:
+        try:
+            op_date = datetime.strptime(op_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        days_passed = (today - op_date).days
+        if days_passed in (3, 7, 30):
+            due.append((name, phone, days_passed))
+    return due
+
+def get_daily_report_data(date_str: str):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM leads WHERE created_at LIKE ?", (date_str + "%",))
+    total_leads = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM leads WHERE created_at LIKE ? AND source LIKE '%booking%'", (date_str + "%",))
+    total_bookings = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM leads WHERE created_at LIKE ? AND source LIKE '%register%'", (date_str + "%",))
+    total_registrations = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM users WHERE started_at LIKE ?", (date_str + "%",))
+    new_users = c.fetchone()[0]
+    c.execute("SELECT package, SUM(count) as total FROM package_interest WHERE date=? GROUP BY package ORDER BY total DESC LIMIT 1", (date_str,))
+    top_pkg_row = c.fetchone()
+    conn.close()
+    top_package = top_pkg_row[0] if top_pkg_row else None
+    return {
+        "total_leads": total_leads, "total_bookings": total_bookings,
+        "total_registrations": total_registrations, "new_users": new_users,
+        "top_package": top_package,
+    }
+
+def touch_user(user_id: int, username: str, lang: str = None, referred_by: int = None):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     now = datetime.now().isoformat()
@@ -81,17 +193,17 @@ def touch_user(user_id: int, username: str, lang: str = None):
             c.execute("UPDATE users SET last_message_at=?, username=?, followup_sent=0 WHERE user_id=?",
                       (now, username, user_id))
     else:
-        c.execute("INSERT INTO users (user_id, username, lang, started_at, last_message_at) VALUES (?,?,?,?,?)",
-                  (user_id, username, lang, now, now))
+        c.execute("INSERT INTO users (user_id, username, lang, started_at, last_message_at, referred_by) VALUES (?,?,?,?,?,?)",
+                  (user_id, username, lang, now, now, referred_by))
     conn.commit()
     conn.close()
 
-def mark_lead(user_id: int, username: str, info: str):
+def mark_lead(user_id: int, username: str, info: str, source: str = "chat"):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("UPDATE users SET lead_sent=1 WHERE user_id=?", (user_id,))
-    c.execute("INSERT INTO leads (user_id, username, info, created_at) VALUES (?,?,?,?)",
-              (user_id, username, info, datetime.now().isoformat()))
+    c.execute("INSERT INTO leads (user_id, username, info, source, created_at) VALUES (?,?,?,?,?)",
+              (user_id, username, info, source, datetime.now().isoformat()))
     conn.commit()
     conn.close()
 
@@ -250,7 +362,30 @@ def webapp_open_keyboard():
 @dp.message(CommandStart())
 async def start_handler(message: Message, state: FSMContext):
     await state.clear()
-    touch_user(message.from_user.id, message.from_user.username or "")
+
+    # Referral (do'stni taklif qilish) parametrini o'qish: /start ref_12345
+    referred_by = None
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) > 1 and parts[1].startswith("ref_"):
+        try:
+            candidate = int(parts[1][4:])
+            if candidate != message.from_user.id:
+                referred_by = candidate
+        except ValueError:
+            pass
+
+    is_new_user = get_referrer(message.from_user.id) is None and referred_by is not None
+    touch_user(message.from_user.id, message.from_user.username or "", referred_by=referred_by)
+
+    if referred_by and is_new_user and MANAGER_CHAT_ID:
+        try:
+            await bot.send_message(
+                MANAGER_CHAT_ID,
+                f"🎁 Referral: @{message.from_user.username or message.from_user.id} "
+                f"foydalanuvchi {referred_by} tomonidan taklif qilingan holda qo'shildi.",
+            )
+        except Exception as e:
+            logging.error(f"Referral signalini yuborishda xato: {e}")
 
     kb = webapp_open_keyboard()
     if kb:
@@ -410,6 +545,29 @@ async def run_llm_and_reply(message: Message, state: FSMContext, history: list, 
     await message.answer(reply_text)
 
 # ============ OPERATORGA SIGNAL + GOOGLE SHEETS ============
+async def notify_referrer_if_any(user_id: int):
+    """Agar bu mijoz kimningdir taklifi orqali kelgan bo'lsa, taklif qiluvchiga va adminga xabar beradi."""
+    referrer_id = get_referrer(user_id)
+    if not referrer_id:
+        return
+    try:
+        await bot.send_message(
+            referrer_id,
+            "🎉 Sizning taklifingiz orqali yangi mijoz Estet Clinic bilan bog'landi! "
+            "Chegirmangizni bilish uchun klinikaga qo'ng'iroq qiling: +998 97 308-09-99",
+        )
+    except Exception as e:
+        logging.error(f"Referrerga xabar yuborishda xato: {e}")
+    if MANAGER_CHAT_ID:
+        try:
+            await bot.send_message(
+                MANAGER_CHAT_ID,
+                f"🎁 REFERRAL LEAD: mijoz (ID: {user_id}) taklif qiluvchi (ID: {referrer_id}) orqali keldi. "
+                f"Chegirma qo'llash uchun eslatma.",
+            )
+        except Exception as e:
+            logging.error(f"Referral admin xabarida xato: {e}")
+
 async def notify_manager(message: Message, lead_info: str):
     user = message.from_user
     text = (
@@ -421,7 +579,8 @@ async def notify_manager(message: Message, lead_info: str):
     if MANAGER_CHAT_ID:
         await bot.send_message(MANAGER_CHAT_ID, text)
 
-    mark_lead(user.id, user.username or "", lead_info)
+    mark_lead(user.id, user.username or "", lead_info, source="telegram-chat")
+    await notify_referrer_if_any(user.id)
 
     if GOOGLE_SHEET_ID:
         try:
@@ -469,6 +628,58 @@ async def followup_checker():
                     logging.error(f"Follow-up yuborishda xato (user {user_id}): {e}")
         except Exception as e:
             logging.error(f"Follow-up checker xatosi: {e}")
+
+# ============ KUNLIK HISOBOT + OPERATSIYADAN KEYINGI ESLATMALAR ============
+def admin_targets():
+    """Xabar yuboriladigan adminlar ro'yxati (ADMIN_CHAT_IDS yoki fallback MANAGER_CHAT_ID)."""
+    if ADMIN_CHAT_IDS:
+        return ADMIN_CHAT_IDS
+    return [MANAGER_CHAT_ID] if MANAGER_CHAT_ID else []
+
+async def send_daily_report():
+    yesterday = (datetime.utcnow() + timedelta(hours=5) - timedelta(days=1)).strftime("%Y-%m-%d")
+    data = get_daily_report_data(yesterday)
+    top_pkg_text = data["top_package"] or "—"
+    text = (
+        f"📊 KUNLIK HISOBOT ({yesterday})\n\n"
+        f"👥 Yangi foydalanuvchilar: {data['new_users']}\n"
+        f"📝 Jami lead'lar: {data['total_leads']}\n"
+        f"📅 Bron qilinganlar: {data['total_bookings']}\n"
+        f"🧾 Ro'yxatga olinganlar: {data['total_registrations']}\n"
+        f"🔥 Eng ko'p so'ralgan paket: {top_pkg_text}"
+    )
+    for target in admin_targets():
+        try:
+            await bot.send_message(target, text)
+        except Exception as e:
+            logging.error(f"Kunlik hisobot yuborishda xato ({target}): {e}")
+
+async def send_operation_reminders():
+    due = get_operations_due_today()
+    if not due:
+        return
+    lines = ["🩹 BUGUNGI KUZATUV QO'NG'IROQLARI:\n"]
+    for name, phone, days_passed in due:
+        lines.append(f"— {name} ({phone}) — amaliyotdan {days_passed}-kun")
+    text = "\n".join(lines)
+    for target in admin_targets():
+        try:
+            await bot.send_message(target, text)
+        except Exception as e:
+            logging.error(f"Kuzatuv eslatmasini yuborishda xato ({target}): {e}")
+
+async def daily_tasks_checker():
+    while True:
+        await asyncio.sleep(1800)  # har 30 daqiqada tekshiradi
+        try:
+            now_tashkent = datetime.utcnow() + timedelta(hours=5)
+            today_str = now_tashkent.strftime("%Y-%m-%d")
+            if now_tashkent.hour == 9 and get_meta("last_report_date") != today_str:
+                await send_daily_report()
+                await send_operation_reminders()
+                set_meta("last_report_date", today_str)
+        except Exception as e:
+            logging.error(f"Kunlik vazifalar xatosi: {e}")
 
 # ============ MINI APP UCHUN BACKEND API (aiohttp) ============
 @web.middleware
@@ -533,7 +744,7 @@ async def handle_chat_api(request):
             except Exception as e:
                 logging.error(f"Mini App lead xabarini yuborishda xato: {e}")
 
-        mark_lead(int(webapp_user_id) if str(webapp_user_id).isdigit() else 0, webapp_username, lead_info)
+        mark_lead(int(webapp_user_id) if str(webapp_user_id).isdigit() else 0, webapp_username, lead_info, source="webapp-chat")
 
         if GOOGLE_SHEET_ID:
             try:
@@ -576,7 +787,7 @@ async def handle_book_api(request):
         except Exception as e:
             logging.error(f"Bron xabarini yuborishda xato: {e}")
 
-    mark_lead(0, name, info)
+    mark_lead(0, name, info, source="webapp-booking")
 
     if GOOGLE_SHEET_ID:
         try:
@@ -607,6 +818,7 @@ async def handle_register_api(request):
     passport = (body.get("passport") or "").strip()
     package = (body.get("package") or "").strip()
     note = (body.get("note") or "").strip()
+    operation_date = (body.get("operation_date") or "").strip()
 
     if not name or not phone or not address:
         return web.json_response({"error": "missing_fields"}, status=400)
@@ -614,7 +826,7 @@ async def handle_register_api(request):
     info = (
         f"F.I.Sh={name}, telefon={phone}, tug'ilgan sana={birth or '-'}, "
         f"manzil={address}, pasport={passport or '-'}, paket={package or '-'}, "
-        f"eslatma={note or '-'}"
+        f"amaliyot sanasi={operation_date or '-'}, eslatma={note or '-'}"
     )
 
     if MANAGER_CHAT_ID:
@@ -627,7 +839,8 @@ async def handle_register_api(request):
         except Exception as e:
             logging.error(f"Ro'yxat xabarini yuborishda xato: {e}")
 
-    mark_lead(0, name, info)
+    mark_lead(0, name, info, source="webapp-register")
+    save_registration(name, phone, birth, address, passport, package, note, operation_date)
 
     if GOOGLE_SHEET_ID:
         try:
@@ -644,6 +857,44 @@ async def handle_register_api(request):
 
     return web.json_response({"success": True})
 
+async def handle_track_package_api(request):
+    """Mini App'da 'Shu paket haqida so'rash' bosilganda chaqiriladi — statistikaga qo'shiladi."""
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid_json"}, status=400)
+    package = (body.get("package") or "").strip()
+    if not package:
+        return web.json_response({"error": "package_required"}, status=400)
+    track_package_interest(package)
+    return web.json_response({"success": True})
+
+async def handle_handoff_api(request):
+    """Mijoz 'Odam bilan gaplashish' tugmasini bosganda operatorga signal beradi."""
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid_json"}, status=400)
+
+    user_id = body.get("user_id") or "-"
+    username = body.get("username") or ""
+    last_message = (body.get("last_message") or "").strip()
+
+    contact_line = f"@{username}" if username else f"ID: {user_id} (username yo'q — telefon raqami suhbatda so'ralishi kerak)"
+    text = (
+        f"🙋 MIJOZ OPERATOR BILAN GAPLASHISHNI SO'RADI\n"
+        f"Foydalanuvchi: {contact_line}\n"
+        f"So'nggi xabari: {last_message or '-'}\n"
+        f"Vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    )
+    if MANAGER_CHAT_ID:
+        try:
+            await bot.send_message(MANAGER_CHAT_ID, text)
+        except Exception as e:
+            logging.error(f"Handoff xabarini yuborishda xato: {e}")
+
+    return web.json_response({"success": True})
+
 async def start_web_server():
     app = web.Application(middlewares=[cors_middleware])
     app.router.add_get("/", handle_health)
@@ -653,6 +904,10 @@ async def start_web_server():
     app.router.add_route("OPTIONS", "/api/book", handle_health)
     app.router.add_post("/api/register", handle_register_api)
     app.router.add_route("OPTIONS", "/api/register", handle_health)
+    app.router.add_post("/api/track-package", handle_track_package_api)
+    app.router.add_route("OPTIONS", "/api/track-package", handle_health)
+    app.router.add_post("/api/handoff", handle_handoff_api)
+    app.router.add_route("OPTIONS", "/api/handoff", handle_health)
     runner = web.AppRunner(app)
     await runner.setup()
     port = int(os.environ.get("PORT", 10000))
@@ -665,6 +920,7 @@ async def main():
     init_db()
     await start_web_server()
     asyncio.create_task(followup_checker())
+    asyncio.create_task(daily_tasks_checker())
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

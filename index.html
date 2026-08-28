@@ -36,6 +36,19 @@
   .nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0 8px;}
   .brand{display:flex;align-items:center;gap:9px;font-family:'Unbounded',sans-serif;font-weight:600;font-size:15px;}
   .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--forest);}
+  .nav-lang{font-size:12px;font-weight:700;color:var(--ink);border:1.5px solid var(--line);border-radius:100px;padding:6px 13px;cursor:pointer;}
+
+  /* ---------- TIL MODAL ---------- */
+  .lang-modal-overlay{position:fixed;inset:0;background:rgba(20,24,26,0.5);z-index:100;display:none;align-items:flex-end;justify-content:center;}
+  .lang-modal-overlay.is-open{display:flex;}
+  .lang-modal{background:#fff;border-radius:24px 24px 0 0;padding:10px 22px calc(26px + var(--safe-bottom));width:100%;max-width:480px;}
+  @media (min-width:640px){ .lang-modal{max-width:620px;border-radius:24px;margin-bottom:40px;} .lang-modal-overlay{align-items:center;} }
+  .lang-modal-handle{width:36px;height:4px;background:var(--line);border-radius:100px;margin:0 auto 18px;}
+  .lang-modal-title{font-size:15px;font-weight:800;margin-bottom:14px;}
+  .lang-option{display:flex;align-items:center;gap:12px;padding:14px 4px;font-size:15px;font-weight:600;border-bottom:1px solid var(--line);cursor:pointer;}
+  .lang-option:last-child{border-bottom:none;}
+  .lang-option .flag{font-size:20px;}
+  .lang-option.is-selected{color:var(--forest);}
 
   /* ---------- HERO (Bosh sahifa) ---------- */
   .hero{position:relative;padding-top:22px;}
@@ -79,6 +92,17 @@
   .card-cta{margin-top:18px;width:100%;padding:12px;border-radius:100px;border:1.5px solid var(--ink); background:transparent; color:var(--ink);font-family:'Manrope',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
   .card.is-max .card-cta{background:var(--forest);border-color:var(--forest);color:#fff;}
   .badge{position:absolute;top:0;right:0;background:var(--gold);color:#fff;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:6px 14px;border-radius:0 0 0 14px;}
+
+  /* ---------- KALKULYATOR ---------- */
+  .calc-card{border:1.5px solid var(--line);border-radius:var(--radius);padding:22px;}
+  .calc-question{font-size:14px;font-weight:700;margin-bottom:12px;}
+  .calc-options{display:flex;flex-direction:column;gap:10px;}
+  .calc-opt{padding:14px 16px;border:1.5px solid var(--line);border-radius:14px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .calc-opt.is-active{background:var(--forest);color:#fff;border-color:var(--forest);}
+  .calc-result-card{background:var(--bg-soft);border-radius:16px;padding:18px;text-align:center;}
+  .calc-result-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-muted);font-weight:700;}
+  .calc-result-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:800;color:var(--forest);margin-top:8px;}
+  .calc-result-price{font-size:14px;color:var(--ink-muted);margin-top:4px;}
 
   .steps{display:flex;flex-direction:column;}
   .step{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--line);}
@@ -161,7 +185,7 @@
   /* ---------- MANZIL ---------- */
   .map-frame{width:100%;height:220px;border:none;border-radius:var(--radius);margin-top:4px;}
   .hotel-list{display:flex;flex-direction:column;gap:12px;margin-top:18px;}
-  .hotel-card{border:1.5px solid var(--line);border-radius:16px;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  .hotel-card{border:1.5px solid var(--line);border-radius:16px;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;}
   .hotel-info h4{font-size:14px;font-weight:700;}
   .hotel-meta{display:flex;gap:10px;margin-top:5px;font-size:11.5px;color:var(--ink-muted);align-items:center;}
   .hotel-meta .rating{color:var(--gold);font-weight:700;}
@@ -191,110 +215,156 @@
 <!-- ================= TAB 1: BOSH SAHIFA ================= -->
 <div class="page is-active" id="page-home">
   <div class="wrap">
-    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div></nav>
+    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div><div class="nav-lang" onclick="openLangModal()">UZ</div></nav>
 
     <section class="hero">
       <div class="hero-canvas-holder"><canvas id="heroCanvas"></canvas></div>
       <div class="hero-content">
-        <span class="eyebrow"><span class="dot"></span>Estetik va plastik jarrohlik markazi</span>
-        <h1 class="hero-title">Sochingizni <em>qaytadan</em><br>tabiiy tarzda tiklang</h1>
-        <p class="hero-sub">Zamonaviy graft texnologiyasi, umrlik kafolat sertifikati va bepul konsultatsiya — Estet Clinic bilan ishonchli natija.</p>
+        <span class="eyebrow"><span class="dot"></span><span data-i18n="heroEyebrow">Estetik va plastik jarrohlik markazi</span></span>
+        <h1 class="hero-title" data-i18n-html="heroTitle">Sochingizni <em>qaytadan</em><br>tabiiy tarzda tiklang</h1>
+        <p class="hero-sub" data-i18n="heroSub">Zamonaviy graft texnologiyasi, umrlik kafolat sertifikati va bepul konsultatsiya — Estet Clinic bilan ishonchli natija.</p>
         <div class="hero-actions">
           <button class="btn btn-primary" onclick="switchTab('ai')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg>
-            AI yordamchi bilan gaplashish
+            <span data-i18n="heroBtnAI">AI yordamchi bilan gaplashish</span>
           </button>
-          <a href="#" class="btn btn-secondary" onclick="document.getElementById('packages').scrollIntoView({behavior:'smooth'});return false;">Paketlarni ko'rish</a>
+          <a href="#" class="btn btn-secondary" data-i18n="heroBtnPackages" onclick="document.getElementById('packages').scrollIntoView({behavior:'smooth'});return false;">Paketlarni ko'rish</a>
         </div>
         <div class="stat-row">
-          <div class="stat"><b>700$</b><span>dan boshlanadi</span></div>
-          <div class="stat"><b>1 yil</b><span>bepul konsultatsiya</span></div>
-          <div class="stat"><b>∞</b><span>umrlik kafolat</span></div>
+          <div class="stat"><b>700$</b><span data-i18n="statPriceLabel">dan boshlanadi</span></div>
+          <div class="stat"><b data-i18n="statYearNumber">1 yil</b><span data-i18n="statYearLabel">bepul konsultatsiya</span></div>
+          <div class="stat"><b>∞</b><span data-i18n="statWarrantyLabel">umrlik kafolat</span></div>
         </div>
       </div>
     </section>
 
     <div class="trust reveal">
-      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Umrlik kafolat</div>
-      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Malakali jarrohlar</div>
-      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Og'riqsiz jarayon</div>
-      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>24 soat ochiq</div>
+      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="trust1">Umrlik kafolat</span></div>
+      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="trust2">Malakali jarrohlar</span></div>
+      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="trust3">Og'riqsiz jarayon</span></div>
+      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="trust4">24 soat ochiq</span></div>
     </div>
+
+    <section class="section" style="padding-bottom:0;">
+      <div class="section-head reveal">
+        <span class="section-eyebrow" data-i18n="calcEyebrow">Kalkulyator</span>
+        <h2 class="section-title" data-i18n="calcTitle">Taxminiy paketingizni bilib oling</h2>
+        <p class="section-desc" data-i18n="calcDesc">2 ta savolga javob bering — sizga mos paketni taxminiy aniqlaymiz.</p>
+      </div>
+      <div class="calc-card reveal">
+        <div id="calcStep1">
+          <div class="calc-question" data-i18n="calcQ1">Qaysi qismda sochsizlik bor?</div>
+          <div class="calc-options">
+            <div class="calc-opt" onclick="calcSelectArea('forehead', this)" data-i18n="calcAreaForehead">Peshona chizig'i</div>
+            <div class="calc-opt" onclick="calcSelectArea('crown', this)" data-i18n="calcAreaCrown">Tepa qism</div>
+            <div class="calc-opt" onclick="calcSelectArea('full', this)" data-i18n="calcAreaFull">Umumiy, keng maydon</div>
+          </div>
+        </div>
+        <div id="calcStep2" style="display:none;margin-top:18px;">
+          <div class="calc-question" data-i18n="calcQ2">Qanchalik jiddiy?</div>
+          <div class="calc-options">
+            <div class="calc-opt" onclick="calcSelectSeverity('small', this)" data-i18n="calcSevSmall">Kichik</div>
+            <div class="calc-opt" onclick="calcSelectSeverity('medium', this)" data-i18n="calcSevMedium">O'rta</div>
+            <div class="calc-opt" onclick="calcSelectSeverity('large', this)" data-i18n="calcSevLarge">Katta</div>
+          </div>
+        </div>
+        <div id="calcResult" style="display:none;margin-top:20px;">
+          <div class="calc-result-card">
+            <div class="calc-result-label" data-i18n="calcResultLabel">Tavsiya etilgan paket</div>
+            <div class="calc-result-name" id="calcResultName"></div>
+            <div class="calc-result-price" id="calcResultPrice"></div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:14px;" onclick="calcGoToAI()" data-i18n="calcCta">AI yordamchidan batafsil so'rash</button>
+          <button class="btn btn-secondary" style="margin-top:10px;" onclick="calcReset()" data-i18n="calcRestart">Qaytadan hisoblash</button>
+        </div>
+      </div>
+    </section>
 
     <section class="section" id="packages">
       <div class="section-head reveal">
-        <span class="section-eyebrow">Paketlar</span>
-        <h2 class="section-title">Sizga mos rejani tanlang</h2>
-        <p class="section-desc">Aniq graft soni bepul konsultatsiyada shifokor tomonidan belgilanadi.</p>
+        <span class="section-eyebrow" data-i18n="pkgEyebrow">Paketlar</span>
+        <h2 class="section-title" data-i18n="pkgTitle">Sizga mos rejani tanlang</h2>
+        <p class="section-desc" data-i18n="pkgDesc">Aniq graft soni bepul konsultatsiyada shifokor tomonidan belgilanadi.</p>
       </div>
       <div class="packages">
         <div class="card reveal">
           <div class="card-top"><div><div class="card-name">Minimum</div><div class="card-grafts">2.000–2.500 graft</div></div><div class="card-price">700$</div></div>
           <ul class="card-feats">
-            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>1 kunlik bepul mehmonxona</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>2 seans plazmoterapiya</li>
-            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Laboratoriya analizlari</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 yillik bepul konsultatsiya</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Umrlik kafolat sertifikati</li>
+            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span data-i18n="featureHotel">1 kunlik bepul mehmonxona</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featurePlasma2">2 seans plazmoterapiya</span></li>
+            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span data-i18n="featureLab">Laboratoriya analizlari</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureConsult">1 yillik bepul konsultatsiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureWarranty">Umrlik kafolat sertifikati</span></li>
           </ul>
-          <button class="card-cta" onclick="askAboutPackage('Minimum')">Shu paket haqida so'rash</button>
+          <button class="card-cta" onclick="askAboutPackage('Minimum')" data-i18n="pkgCta">Shu paket haqida so'rash</button>
         </div>
         <div class="card reveal">
           <div class="card-top"><div><div class="card-name">Medium</div><div class="card-grafts">2.600–3.500 graft</div></div><div class="card-price">900$</div></div>
           <ul class="card-feats">
-            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>1 kunlik bepul mehmonxona</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>2 seans plazmoterapiya</li>
-            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Laboratoriya analizlari</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 yillik bepul konsultatsiya</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Umrlik kafolat sertifikati</li>
+            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span data-i18n="featureHotel">1 kunlik bepul mehmonxona</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featurePlasma2">2 seans plazmoterapiya</span></li>
+            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span data-i18n="featureLab">Laboratoriya analizlari</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureConsult">1 yillik bepul konsultatsiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureWarranty">Umrlik kafolat sertifikati</span></li>
           </ul>
-          <button class="card-cta" onclick="askAboutPackage('Medium')">Shu paket haqida so'rash</button>
+          <button class="card-cta" onclick="askAboutPackage('Medium')" data-i18n="pkgCta">Shu paket haqida so'rash</button>
         </div>
         <div class="card is-max reveal">
-          <span class="badge">Optimal</span>
+          <span class="badge" data-i18n="badgeOptimal">Optimal</span>
           <div class="card-top"><div><div class="card-name">Maximum</div><div class="card-grafts">3.600–4.500 graft</div></div><div class="card-price">1100$</div></div>
           <ul class="card-feats">
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 kunlik bepul mehmonxona</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>3 seans plazmoterapiya</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Laboratoriya analizlari</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 yillik bepul konsultatsiya</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Umrlik kafolat sertifikati</li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureHotel">1 kunlik bepul mehmonxona</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featurePlasma3">3 seans plazmoterapiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureLab">Laboratoriya analizlari</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureConsult">1 yillik bepul konsultatsiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureWarranty">Umrlik kafolat sertifikati</span></li>
           </ul>
-          <button class="card-cta" onclick="askAboutPackage('Maximum')">Shu paket haqida so'rash</button>
+          <button class="card-cta" onclick="askAboutPackage('Maximum')" data-i18n="pkgCta">Shu paket haqida so'rash</button>
         </div>
         <div class="card reveal">
           <div class="card-top"><div><div class="card-name">Maximum+</div><div class="card-grafts">4.600–6.000 graft</div></div><div class="card-price">1300$</div></div>
           <ul class="card-feats">
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 kunlik bepul mehmonxona</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>3 seans plazmoterapiya</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Laboratoriya analizlari</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>1 yillik bepul konsultatsiya</li>
-            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>Umrlik kafolat sertifikati</li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureHotel">1 kunlik bepul mehmonxona</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featurePlasma3">3 seans plazmoterapiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureLab">Laboratoriya analizlari</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureConsult">1 yillik bepul konsultatsiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureWarranty">Umrlik kafolat sertifikati</span></li>
           </ul>
-          <button class="card-cta" onclick="askAboutPackage('Maximum+')">Shu paket haqida so'rash</button>
+          <button class="card-cta" onclick="askAboutPackage('Maximum+')" data-i18n="pkgCta">Shu paket haqida so'rash</button>
         </div>
       </div>
     </section>
 
     <section class="section">
-      <div class="section-head reveal"><span class="section-eyebrow">Jarayon</span><h2 class="section-title">4 bosqichda yangi soch</h2></div>
+      <div class="section-head reveal"><span class="section-eyebrow" data-i18n="stepsEyebrow">Jarayon</span><h2 class="section-title" data-i18n="stepsTitle">4 bosqichda yangi soch</h2></div>
       <div class="steps reveal">
-        <div class="step"><div class="step-num">01</div><div><div class="step-title">Bepul konsultatsiya</div><div class="step-desc">Shifokor holatingizni ko'rib chiqadi va aniq graft sonini belgilaydi.</div></div></div>
-        <div class="step"><div class="step-num">02</div><div><div class="step-title">Reja va sana</div><div class="step-desc">Sizga mos paket va operatsiya sanasi kelishiladi.</div></div></div>
-        <div class="step"><div class="step-num">03</div><div><div class="step-title">Operatsiya</div><div class="step-desc">Zamonaviy usulda, og'riqsiz va bir kunlik jarayon.</div></div></div>
-        <div class="step"><div class="step-num">04</div><div><div class="step-title">Kuzatuv va natija</div><div class="step-desc">1 yil davomida bepul konsultatsiya va umrlik kafolat.</div></div></div>
+        <div class="step"><div class="step-num">01</div><div><div class="step-title" data-i18n="step1Title">Bepul konsultatsiya</div><div class="step-desc" data-i18n="step1Desc">Shifokor holatingizni ko'rib chiqadi va aniq graft sonini belgilaydi.</div></div></div>
+        <div class="step"><div class="step-num">02</div><div><div class="step-title" data-i18n="step2Title">Reja va sana</div><div class="step-desc" data-i18n="step2Desc">Sizga mos paket va operatsiya sanasi kelishiladi.</div></div></div>
+        <div class="step"><div class="step-num">03</div><div><div class="step-title" data-i18n="step3Title">Operatsiya</div><div class="step-desc" data-i18n="step3Desc">Zamonaviy usulda, og'riqsiz va bir kunlik jarayon.</div></div></div>
+        <div class="step"><div class="step-num">04</div><div><div class="step-title" data-i18n="step4Title">Kuzatuv va natija</div><div class="step-desc" data-i18n="step4Desc">1 yil davomida bepul konsultatsiya va umrlik kafolat.</div></div></div>
       </div>
     </section>
 
     <section class="section" id="contact">
       <div class="contact-card reveal">
-        <div class="contact-title">Bepul konsultatsiyaga yoziling</div>
-        <p class="contact-desc">Mutaxassisimiz siz bilan bog'lanib, barcha savollaringizga javob beradi.</p>
+        <div class="contact-title" data-i18n="contactTitle">Bepul konsultatsiyaga yoziling</div>
+        <p class="contact-desc" data-i18n="contactDesc">Mutaxassisimiz siz bilan bog'lanib, barcha savollaringizga javob beradi.</p>
         <div class="contact-phones">
           <a href="tel:+998973080999"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+998 97 308-09-99</a>
           <a href="tel:+998973009019"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+998 97 300-90-19</a>
         </div>
-        <button class="btn btn-primary" onclick="switchTab('booking')">Bron qilish</button>
+        <button class="btn btn-primary" data-i18n="contactBookBtn" onclick="switchTab('booking')">Bron qilish</button>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:22px;">
+      <div class="card reveal" style="text-align:center;padding:28px 22px;">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;color:var(--forest);"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+        </div>
+        <h3 data-i18n="referralTitle" style="font-size:16px;font-weight:800;">Do'stingizni taklif qiling</h3>
+        <p data-i18n="referralDesc" style="font-size:13px;color:var(--ink-muted);margin-top:8px;line-height:1.55;">Do'stingiz sizning havolangiz orqali kelsa, ikkalangiz ham chegirmaga ega bo'lasiz.</p>
+        <button class="btn btn-secondary" data-i18n="referralBtn" style="margin-top:16px;" onclick="shareReferral()">Ulashish</button>
       </div>
     </section>
 
@@ -306,17 +376,18 @@
 <div class="page" id="page-ai">
   <div class="chat-page">
     <div class="chat-header">
-      <h2>🤖 AI Yordamchi</h2>
-      <p>Savolingizni yozing — soch ekish bo'yicha maslahat beraman</p>
+      <h2 data-i18n="aiHeaderTitle">🤖 AI Yordamchi</h2>
+      <p data-i18n="aiHeaderDesc">Savolingizni yozing — soch ekish bo'yicha maslahat beraman</p>
     </div>
     <div class="chat-body" id="chatBody"></div>
     <div class="chat-suggest" id="chatSuggest">
-      <div class="chip" onclick="sendQuickMessage('Narxlar qanday?')">💰 Narxlar</div>
-      <div class="chip" onclick="sendQuickMessage('Bepul konsultatsiyaga yozilmoqchiman')">📅 Konsultatsiya</div>
-      <div class="chip" onclick="sendQuickMessage('Operatsiya og\'riqli bo\'ladimi?')">💉 Og'riqli bo'ladimi?</div>
+      <div class="chip" data-i18n="chipPrices" onclick="sendQuickMessage(T('quickPricesMsg'))">💰 Narxlar</div>
+      <div class="chip" data-i18n="chipConsult" onclick="sendQuickMessage(T('quickConsultMsg'))">📅 Konsultatsiya</div>
+      <div class="chip" data-i18n="chipPain" onclick="sendQuickMessage(T('quickPainMsg'))">💉 Og'riqli bo'ladimi?</div>
+      <div class="chip" data-i18n="chipHandoff" onclick="requestHandoff()">👤 Odam bilan gaplashish</div>
     </div>
     <div class="chat-input-bar">
-      <input type="text" id="chatInput" placeholder="Xabar yozing..." onkeydown="if(event.key==='Enter')sendMessage();">
+      <input type="text" id="chatInput" data-i18n-placeholder="chatPlaceholder" placeholder="Xabar yozing..." onkeydown="if(event.key==='Enter')sendMessage();">
       <button class="send-btn" onclick="sendMessage()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
       </button>
@@ -327,31 +398,31 @@
 <!-- ================= TAB: BRON QILISH ================= -->
 <div class="page" id="page-booking">
   <div class="wrap">
-    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div></nav>
+    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div><div class="nav-lang" onclick="openLangModal()">UZ</div></nav>
     <section class="section" style="padding-top:8px;">
       <div class="section-head reveal">
-        <span class="section-eyebrow">Bron qilish</span>
-        <h2 class="section-title">Bepul konsultatsiyaga yoziling</h2>
-        <p class="section-desc">Kun va vaqtni tanlang — operatorimiz tasdiqlash uchun siz bilan bog'lanadi.</p>
+        <span class="section-eyebrow" data-i18n="bookEyebrow">Bron qilish</span>
+        <h2 class="section-title" data-i18n="bookTitle">Bepul konsultatsiyaga yoziling</h2>
+        <p class="section-desc" data-i18n="bookDesc">Kun va vaqtni tanlang — operatorimiz tasdiqlash uchun siz bilan bog'lanadi.</p>
       </div>
 
       <div id="bookingStep1">
         <div class="day-scroll" id="daySelector"></div>
-        <div class="slot-label">Vaqtni tanlang</div>
+        <div class="slot-label" data-i18n="slotLabel">Vaqtni tanlang</div>
         <div class="slot-grid" id="slotGrid"></div>
 
         <div id="bookingForm" style="display:none;margin-top:22px;">
-          <div class="book-summary"><span>Tanlangan vaqt</span><b id="bookSummaryText"></b></div>
-          <input type="text" id="bookName" class="book-input" placeholder="Ismingiz" style="margin-top:16px;">
-          <input type="tel" id="bookPhone" class="book-input" placeholder="Telefon raqamingiz (+998...)" style="margin-top:10px;">
-          <button class="btn btn-primary" style="margin-top:14px;" onclick="submitBooking()">Bron qilish</button>
+          <div class="book-summary"><span data-i18n="bookSummaryLabel">Tanlangan vaqt</span><b id="bookSummaryText"></b></div>
+          <input type="text" id="bookName" class="book-input" data-i18n-placeholder="bookNamePlaceholder" placeholder="Ismingiz" style="margin-top:16px;">
+          <input type="tel" id="bookPhone" class="book-input" data-i18n-placeholder="bookPhonePlaceholder" placeholder="Telefon raqamingiz (+998...)" style="margin-top:10px;">
+          <button class="btn btn-primary" style="margin-top:14px;" onclick="submitBooking()" data-i18n="bookSubmitBtn">Bron qilish</button>
         </div>
       </div>
 
       <div id="bookingSuccess" class="empty-state" style="display:none;">
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div>
-        <h3>Bron qabul qilindi!</h3>
-        <p>Operatorimiz tez orada siz bilan bog'lanib, vaqtni tasdiqlaydi.</p>
+        <h3 data-i18n="bookSuccessTitle">Bron qabul qilindi!</h3>
+        <p data-i18n="bookSuccessDesc">Operatorimiz tez orada siz bilan bog'lanib, vaqtni tasdiqlaydi.</p>
       </div>
     </section>
     <footer><p>© Estet Clinic — Estetik va plastik jarrohlik markazi</p></footer>
@@ -361,7 +432,7 @@
 <!-- ================= TAB: RO'YXATDAN O'TISH ================= -->
 <div class="page" id="page-register">
   <div class="wrap">
-    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div></nav>
+    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div><div class="nav-lang" onclick="openLangModal()">UZ</div></nav>
     <section class="section" style="padding-top:8px;">
       <div class="section-head reveal">
         <span class="section-eyebrow">Ro'yxatdan o'tish</span>
@@ -404,6 +475,10 @@
           <span class="form-label">Qo'shimcha eslatma <span style="font-weight:400;">(ixtiyoriy)</span></span>
           <textarea id="regNote" class="book-input" placeholder="Masalan: allergiya, maxsus istak va h.k."></textarea>
         </div>
+        <div class="form-group">
+          <span class="form-label">Amaliyot sanasi <span style="font-weight:400;">(agar bo'lgan/rejalashtirilgan bo'lsa)</span></span>
+          <input type="date" id="regOpDate" class="book-input">
+        </div>
         <button class="btn btn-primary" style="margin-top:18px;" onclick="submitRegister()">Ro'yxatga olish</button>
       </div>
 
@@ -420,11 +495,11 @@
 <!-- ================= TAB 3: VAKANSIYA ================= -->
 <div class="page" id="page-jobs">
   <div class="wrap">
-    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div></nav>
+    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div><div class="nav-lang" onclick="openLangModal()">UZ</div></nav>
     <div class="empty-state">
       <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
-      <h3>Vakansiyalar tez kunda</h3>
-      <p>Hozircha ochiq ish o'rinlari yo'q. Yangi vakansiyalar shu yerda e'lon qilinadi — kuzatib boring!</p>
+      <h3 data-i18n="jobsTitle">Vakansiyalar tez kunda</h3>
+      <p data-i18n="jobsDesc">Hozircha ochiq ish o'rinlari yo'q. Yangi vakansiyalar shu yerda e'lon qilinadi — kuzatib boring!</p>
     </div>
   </div>
 </div>
@@ -432,30 +507,30 @@
 <!-- ================= TAB 4: MANZIL ================= -->
 <div class="page" id="page-location">
   <div class="wrap">
-    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div></nav>
+    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div><div class="nav-lang" onclick="openLangModal()">UZ</div></nav>
     <section class="section" style="padding-top:8px;">
       <div class="section-head reveal">
-        <span class="section-eyebrow">Manzil</span>
-        <h2 class="section-title">Buxoro, Oqmasjid ko'chasi 8/5</h2>
-        <p class="section-desc">Klinika 24 soat ochiq. Boshqa shahardan kelayotgan mijozlar uchun yaqin mehmonxonalar ro'yxati quyida.</p>
+        <span class="section-eyebrow" data-i18n="locEyebrow">Manzil</span>
+        <h2 class="section-title" data-i18n="locTitle">Buxoro, Oqmasjid ko'chasi 8/5</h2>
+        <p class="section-desc" data-i18n="locDesc">Klinika 24 soat ochiq. Boshqa shahardan kelayotgan mijozlar uchun yaqin mehmonxonalar ro'yxati quyida.</p>
       </div>
       <iframe class="map-frame" src="https://www.google.com/maps?q=39.783288,64.448354&hl=uz&z=16&output=embed" loading="lazy"></iframe>
-      <a href="https://yandex.com/maps/10330/bukhara/house/oqmasjid_ko_chasi_8_5/Yk0YcgNnQEMPQF1jfXt5cn1gZg==/" target="_blank" class="btn btn-secondary" style="margin-top:14px;">Yo'l xaritasini ochish</a>
+      <a href="https://yandex.com/maps/10330/bukhara/house/oqmasjid_ko_chasi_8_5/Yk0YcgNnQEMPQF1jfXt5cn1gZg==/" target="_blank" class="btn btn-secondary" data-i18n="locOpenRoute" style="margin-top:14px;">Yo'l xaritasini ochish</a>
     </section>
 
     <section class="section" style="padding-top:36px;">
       <div class="section-head reveal">
-        <span class="section-eyebrow">Yaqin mehmonxonalar</span>
-        <h2 class="section-title">Klinikaga yaqin turar joylar</h2>
+        <span class="section-eyebrow" data-i18n="hotelsEyebrow">Yaqin mehmonxonalar</span>
+        <h2 class="section-title" data-i18n="hotelsTitle">Klinikaga yaqin turar joylar</h2>
       </div>
       <div class="hotel-list">
-        <div class="hotel-card"><div class="hotel-info"><h4>Grand Ark Bukhara</h4><div class="hotel-meta"><span class="rating">★ 4.7</span><span>1.0 km</span></div></div><a class="hotel-call" href="tel:+998902989565"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
-        <div class="hotel-card"><div class="hotel-info"><h4>Garden Plaza Bukhara</h4><div class="hotel-meta"><span class="rating">★ 4.3</span><span>1.3 km</span></div></div></div>
-        <div class="hotel-card"><div class="hotel-info"><h4>Khan Rooms</h4><div class="hotel-meta"><span class="rating">★ 4.1</span><span>1.4 km</span></div></div><a class="hotel-call" href="tel:+998914005979"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
-        <div class="hotel-card"><div class="hotel-info"><h4>Zara Family Guest House</h4><div class="hotel-meta"><span class="rating">★ 5.0</span><span>1.9 km</span></div></div><a class="hotel-call" href="tel:+998906370805"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
-        <div class="hotel-card"><div class="hotel-info"><h4>Everland Bukhara Hotel</h4><div class="hotel-meta"><span class="rating">★ 4.9</span><span>2.3 km</span></div></div><a class="hotel-call" href="tel:+998886000008"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
+        <div class="hotel-card" onclick="openHotelMap(39.774995,64.4428545)"><div class="hotel-info"><h4>Grand Ark Bukhara</h4><div class="hotel-meta"><span class="rating">★ 4.7</span><span>1.0 km</span></div></div><a class="hotel-call" href="tel:+998902989565" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
+        <div class="hotel-card" onclick="openHotelMap(39.782126,64.4333559)"><div class="hotel-info"><h4>Garden Plaza Bukhara</h4><div class="hotel-meta"><span class="rating">★ 4.3</span><span>1.3 km</span></div></div></div>
+        <div class="hotel-card" onclick="openHotelMap(39.7754226,64.4360799)"><div class="hotel-info"><h4>Khan Rooms</h4><div class="hotel-meta"><span class="rating">★ 4.1</span><span>1.4 km</span></div></div><a class="hotel-call" href="tel:+998914005979" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
+        <div class="hotel-card" onclick="openHotelMap(39.7822192,64.4255769)"><div class="hotel-info"><h4>Zara Family Guest House</h4><div class="hotel-meta"><span class="rating">★ 5.0</span><span>1.9 km</span></div></div><a class="hotel-call" href="tel:+998906370805" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
+        <div class="hotel-card" onclick="openHotelMap(39.7741014,64.424721)"><div class="hotel-info"><h4>Everland Bukhara Hotel</h4><div class="hotel-meta"><span class="rating">★ 4.9</span><span>2.3 km</span></div></div><a class="hotel-call" href="tel:+998886000008" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
       </div>
-      <p class="hotel-note">Narxlar mavsum va xonalar bandligiga qarab o'zgaradi — aniq narxni telefon orqali so'rashingiz mumkin.</p>
+      <p class="hotel-note" data-i18n="hotelNote">Narxlar mavsum va xonalar bandligiga qarab o'zgaradi — aniq narxni telefon orqali so'rashingiz mumkin.</p>
     </section>
     <footer><p>© Estet Clinic — Estetik va plastik jarrohlik markazi</p></footer>
   </div>
@@ -465,34 +540,46 @@
 <nav class="tabbar">
   <button class="tab-btn is-active" data-tab="home" onclick="switchTab('home')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/></svg>
-    <span>Bosh sahifa</span>
+    <span data-i18n="tabHome">Bosh sahifa</span>
   </button>
   <button class="tab-btn" data-tab="booking" onclick="switchTab('booking')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-    <span>Bron</span>
+    <span data-i18n="tabBooking">Bron</span>
   </button>
   <button class="tab-btn" data-tab="ai" onclick="switchTab('ai')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg>
-    <span>AI Yordamchi</span>
+    <span data-i18n="tabAI">AI Yordamchi</span>
   </button>
   <button class="tab-btn" data-tab="register" onclick="switchTab('register')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11v6M19 14h6"/></svg>
-    <span>Ro'yxat</span>
+    <span data-i18n="tabRegister">Ro'yxat</span>
   </button>
   <button class="tab-btn" data-tab="jobs" onclick="switchTab('jobs')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-    <span>Vakansiya</span>
+    <span data-i18n="tabJobs">Vakansiya</span>
   </button>
   <button class="tab-btn" data-tab="location" onclick="switchTab('location')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-    <span>Manzil</span>
+    <span data-i18n="tabLocation">Manzil</span>
   </button>
 </nav>
+
+<!-- ================= TIL TANLASH MODAL ================= -->
+<div class="lang-modal-overlay" id="langModalOverlay" onclick="closeLangModalOutside(event)">
+  <div class="lang-modal">
+    <div class="lang-modal-handle"></div>
+    <div class="lang-modal-title">Tilni tanlang / Choose language</div>
+    <div class="lang-option" data-lang="uz" onclick="chooseLang('uz')"><span class="flag">🇺🇿</span> O'zbek</div>
+    <div class="lang-option" data-lang="ru" onclick="chooseLang('ru')"><span class="flag">🇷🇺</span> Русский</div>
+    <div class="lang-option" data-lang="tr" onclick="chooseLang('tr')"><span class="flag">🇹🇷</span> Türkçe</div>
+    <div class="lang-option" data-lang="tg" onclick="chooseLang('tg')"><span class="flag">🇹🇯</span> Тоҷикӣ</div>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
   // ======== SOZLAMA: backend API manzili (deploy qilingach shu yerga qo'ying) ========
-  const API_BASE = "https://estet-clinic.onrender.com";
+  const API_BASE = "https://SIZNING-RENDER-MANZILINGIZ.onrender.com";
 
   // ---------- Telegram Mini App bootstrap ----------
   const tg = window.Telegram ? window.Telegram.WebApp : null;
@@ -501,9 +588,328 @@
     try { tg.setHeaderColor('#ffffff'); tg.setBackgroundColor('#ffffff'); } catch(e){}
   }
 
+  // ======== TIL TIZIMI (i18n) ========
+  const LANG_LABELS = {uz:'UZ', ru:'RU', tr:'TR', tg:'TJ'};
+
+  const TRANSLATIONS = {
+    uz: {
+      heroEyebrow:"Estetik va plastik jarrohlik markazi",
+      heroTitle:"Sochingizni <em>qaytadan</em><br>tabiiy tarzda tiklang",
+      heroSub:"Zamonaviy graft texnologiyasi, umrlik kafolat sertifikati va bepul konsultatsiya — Estet Clinic bilan ishonchli natija.",
+      heroBtnAI:"AI yordamchi bilan gaplashish", heroBtnPackages:"Paketlarni ko'rish",
+      statPriceLabel:"dan boshlanadi", statYearNumber:"1 yil", statYearLabel:"bepul konsultatsiya", statWarrantyLabel:"umrlik kafolat",
+      trust1:"Umrlik kafolat", trust2:"Malakali jarrohlar", trust3:"Og'riqsiz jarayon", trust4:"24 soat ochiq",
+      calcEyebrow:"Kalkulyator", calcTitle:"Taxminiy paketingizni bilib oling", calcDesc:"2 ta savolga javob bering — sizga mos paketni taxminiy aniqlaymiz.",
+      calcQ1:"Qaysi qismda sochsizlik bor?", calcAreaForehead:"Peshona chizig'i", calcAreaCrown:"Tepa qism", calcAreaFull:"Umumiy, keng maydon",
+      calcQ2:"Qanchalik jiddiy?", calcSevSmall:"Kichik", calcSevMedium:"O'rta", calcSevLarge:"Katta",
+      calcResultLabel:"Tavsiya etilgan paket", calcCta:"AI yordamchidan batafsil so'rash", calcRestart:"Qaytadan hisoblash",
+      pkgEyebrow:"Paketlar", pkgTitle:"Sizga mos rejani tanlang", pkgDesc:"Aniq graft soni bepul konsultatsiyada shifokor tomonidan belgilanadi.",
+      featureHotel:"1 kunlik bepul mehmonxona", featurePlasma2:"2 seans plazmoterapiya", featurePlasma3:"3 seans plazmoterapiya",
+      featureLab:"Laboratoriya analizlari", featureConsult:"1 yillik bepul konsultatsiya", featureWarranty:"Umrlik kafolat sertifikati",
+      pkgCta:"Shu paket haqida so'rash", badgeOptimal:"Optimal",
+      stepsEyebrow:"Jarayon", stepsTitle:"4 bosqichda yangi soch",
+      step1Title:"Bepul konsultatsiya", step1Desc:"Shifokor holatingizni ko'rib chiqadi va aniq graft sonini belgilaydi.",
+      step2Title:"Reja va sana", step2Desc:"Sizga mos paket va operatsiya sanasi kelishiladi.",
+      step3Title:"Operatsiya", step3Desc:"Zamonaviy usulda, og'riqsiz va bir kunlik jarayon.",
+      step4Title:"Kuzatuv va natija", step4Desc:"1 yil davomida bepul konsultatsiya va umrlik kafolat.",
+      contactTitle:"Bepul konsultatsiyaga yoziling", contactDesc:"Mutaxassisimiz siz bilan bog'lanib, barcha savollaringizga javob beradi.", contactBookBtn:"Bron qilish",
+      tabHome:"Bosh sahifa", tabBooking:"Bron", tabAI:"AI Yordamchi", tabRegister:"Ro'yxat", tabJobs:"Vakansiya", tabLocation:"Manzil",
+      aiHeaderTitle:"🤖 AI Yordamchi", aiHeaderDesc:"Savolingizni yozing — soch ekish bo'yicha maslahat beraman",
+      aiInitMsg:"Assalomu alaykum! 🌿 Men Estet Clinic'ning AI yordamchisiman. Soch ekish bo'yicha savollaringizga javob beraman. Sizga qanday yordam bera olaman?",
+      chipPrices:"💰 Narxlar", chipConsult:"📅 Konsultatsiya", chipPain:"💉 Og'riqli bo'ladimi?", chipHandoff:"👤 Odam bilan gaplashish",
+      referralTitle:"Do'stingizni taklif qiling", referralDesc:"Do'stingiz sizning havolangiz orqali kelsa, ikkalangiz ham chegirmaga ega bo'lasiz.", referralBtn:"Ulashish",
+      referralShareText:"Estet Clinic - soch ekish markazi. Bepul konsultatsiya uchun shu havola orqali kiring!", referralNeedTelegram:"Bu funksiya faqat Telegram ilovasi ichida ishlaydi.",
+      handoffSent:"✅ So'rovingiz operatorga yuborildi. Tez orada siz bilan bog'lanishadi.",
+      quickPricesMsg:"Narxlar qanday?", quickConsultMsg:"Bepul konsultatsiyaga yozilmoqchiman", quickPainMsg:"Operatsiya og'riqli bo'ladimi?",
+      chatPlaceholder:"Xabar yozing...", chatErrorGeneric:"Kechirasiz, xatolik yuz berdi. Qaytadan urinib ko'ring.",
+      chatErrorNetwork:"Internet aloqasi bilan muammo. Iltimos qaytadan urinib ko'ring yoki +998 97 308-09-99 raqamiga qo'ng'iroq qiling.",
+      askPackageTemplate:"{name} paketi haqida batafsil aytib bering",
+      jobsTitle:"Vakansiyalar tez kunda", jobsDesc:"Hozircha ochiq ish o'rinlari yo'q. Yangi vakansiyalar shu yerda e'lon qilinadi — kuzatib boring!",
+      locEyebrow:"Manzil", locTitle:"Buxoro, Oqmasjid ko'chasi 8/5", locDesc:"Klinika 24 soat ochiq. Boshqa shahardan kelayotgan mijozlar uchun yaqin mehmonxonalar ro'yxati quyida.",
+      locOpenRoute:"Yo'l xaritasini ochish", hotelsEyebrow:"Yaqin mehmonxonalar", hotelsTitle:"Klinikaga yaqin turar joylar",
+      hotelNote:"Narxlar mavsum va xonalar bandligiga qarab o'zgaradi — aniq narxni telefon orqali so'rashingiz mumkin.",
+      bookEyebrow:"Bron qilish", bookTitle:"Bepul konsultatsiyaga yoziling", bookDesc:"Kun va vaqtni tanlang — operatorimiz tasdiqlash uchun siz bilan bog'lanadi.",
+      slotLabel:"Vaqtni tanlang", bookSummaryLabel:"Tanlangan vaqt", bookNamePlaceholder:"Ismingiz", bookPhonePlaceholder:"Telefon raqamingiz (+998...)",
+      bookSubmitBtn:"Bron qilish", bookSuccessTitle:"Bron qabul qilindi!", bookSuccessDesc:"Operatorimiz tez orada siz bilan bog'lanib, vaqtni tasdiqlaydi.",
+      bookFillFields:"Iltimos, ism va telefon raqamingizni kiriting.", bookGenericError:"Xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.",
+      bookNetworkError:"Internet aloqasi bilan muammo. +998 97 308-09-99 raqamiga qo'ng'iroq qiling.",
+      todayLabel:"Bugun", tomorrowLabel:"Ertaga",
+      days:["Yak","Dush","Sesh","Chor","Pay","Jum","Shan"], months:["yan","fev","mar","apr","may","iyun","iyul","avg","sen","okt","noy","dek"],
+    },
+    ru: {
+      heroEyebrow:"Центр эстетической и пластической хирургии",
+      heroTitle:"Верните волосам <em>естественный</em><br>вид заново",
+      heroSub:"Современная технология графтинга, сертификат пожизненной гарантии и бесплатная консультация — надёжный результат с Estet Clinic.",
+      heroBtnAI:"Написать AI-помощнику", heroBtnPackages:"Смотреть пакеты",
+      statPriceLabel:"от такой цены", statYearNumber:"1 год", statYearLabel:"бесплатная консультация", statWarrantyLabel:"пожизненная гарантия",
+      trust1:"Пожизненная гарантия", trust2:"Опытные хирурги", trust3:"Безболезненная процедура", trust4:"Открыто 24 часа",
+      calcEyebrow:"Калькулятор", calcTitle:"Узнайте свой примерный пакет", calcDesc:"Ответьте на 2 вопроса — мы примерно определим подходящий пакет.",
+      calcQ1:"В какой области выпадение волос?", calcAreaForehead:"Линия лба", calcAreaCrown:"Теменная зона", calcAreaFull:"Обширная область",
+      calcQ2:"Насколько выражено?", calcSevSmall:"Небольшое", calcSevMedium:"Среднее", calcSevLarge:"Сильное",
+      calcResultLabel:"Рекомендуемый пакет", calcCta:"Спросить подробнее у AI-помощника", calcRestart:"Рассчитать заново",
+      pkgEyebrow:"Пакеты", pkgTitle:"Выберите подходящий план", pkgDesc:"Точное количество графтов определяет врач на бесплатной консультации.",
+      featureHotel:"1 ночь бесплатного проживания", featurePlasma2:"2 сеанса плазмотерапии", featurePlasma3:"3 сеанса плазмотерапии",
+      featureLab:"Лабораторные анализы", featureConsult:"1 год бесплатных консультаций", featureWarranty:"Сертификат пожизненной гарантии",
+      pkgCta:"Спросить об этом пакете", badgeOptimal:"Оптимально",
+      stepsEyebrow:"Процесс", stepsTitle:"Новые волосы за 4 шага",
+      step1Title:"Бесплатная консультация", step1Desc:"Врач осмотрит вас и определит точное количество графтов.",
+      step2Title:"План и дата", step2Desc:"Согласовываются подходящий пакет и дата операции.",
+      step3Title:"Операция", step3Desc:"Современным методом, безболезненно, в течение одного дня.",
+      step4Title:"Наблюдение и результат", step4Desc:"Год бесплатных консультаций и пожизненная гарантия.",
+      contactTitle:"Запишитесь на бесплатную консультацию", contactDesc:"Наш специалист свяжется с вами и ответит на все вопросы.", contactBookBtn:"Записаться",
+      tabHome:"Главная", tabBooking:"Запись", tabAI:"AI-помощник", tabRegister:"Регистрация", tabJobs:"Вакансии", tabLocation:"Адрес",
+      aiHeaderTitle:"🤖 AI-помощник", aiHeaderDesc:"Напишите ваш вопрос — я проконсультирую по пересадке волос",
+      aiInitMsg:"Здравствуйте! 🌿 Я AI-помощник Estet Clinic. Отвечу на ваши вопросы о пересадке волос. Чем могу помочь?",
+      chipPrices:"💰 Цены", chipConsult:"📅 Консультация", chipPain:"💉 Будет больно?", chipHandoff:"👤 Поговорить с человеком",
+      referralTitle:"Пригласите друга", referralDesc:"Если друг придёт по вашей ссылке, вы оба получите скидку.", referralBtn:"Поделиться",
+      referralShareText:"Estet Clinic - центр пересадки волос. Перейдите по этой ссылке для бесплатной консультации!", referralNeedTelegram:"Эта функция работает только внутри приложения Telegram.",
+      handoffSent:"✅ Ваш запрос отправлен оператору. Скоро с вами свяжутся.",
+      quickPricesMsg:"Какие у вас цены?", quickConsultMsg:"Хочу записаться на бесплатную консультацию", quickPainMsg:"Операция будет болезненной?",
+      chatPlaceholder:"Напишите сообщение...", chatErrorGeneric:"Извините, произошла ошибка. Попробуйте ещё раз.",
+      chatErrorNetwork:"Проблема с подключением к интернету. Попробуйте ещё раз или позвоните по номеру +998 97 308-09-99.",
+      askPackageTemplate:"Расскажите подробнее о пакете {name}",
+      jobsTitle:"Вакансии скоро", jobsDesc:"Сейчас открытых вакансий нет. Новые объявления появятся здесь — следите за обновлениями!",
+      locEyebrow:"Адрес", locTitle:"Бухара, улица Окмасжид 8/5", locDesc:"Клиника открыта 24 часа. Список ближайших отелей для гостей из других городов — ниже.",
+      locOpenRoute:"Открыть маршрут", hotelsEyebrow:"Ближайшие отели", hotelsTitle:"Места проживания рядом с клиникой",
+      hotelNote:"Цены меняются в зависимости от сезона и загруженности — точную цену уточняйте по телефону.",
+      bookEyebrow:"Запись", bookTitle:"Запишитесь на бесплатную консультацию", bookDesc:"Выберите день и время — оператор свяжется с вами для подтверждения.",
+      slotLabel:"Выберите время", bookSummaryLabel:"Выбранное время", bookNamePlaceholder:"Ваше имя", bookPhonePlaceholder:"Ваш номер телефона (+998...)",
+      bookSubmitBtn:"Записаться", bookSuccessTitle:"Запись принята!", bookSuccessDesc:"Наш оператор скоро свяжется с вами для подтверждения времени.",
+      bookFillFields:"Пожалуйста, введите имя и номер телефона.", bookGenericError:"Произошла ошибка. Попробуйте ещё раз.",
+      bookNetworkError:"Проблема с интернет-соединением. Позвоните по номеру +998 97 308-09-99.",
+      todayLabel:"Сегодня", tomorrowLabel:"Завтра",
+      days:["Вс","Пн","Вт","Ср","Чт","Пт","Сб"], months:["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"],
+    },
+    tr: {
+      heroEyebrow:"Estetik ve Plastik Cerrahi Merkezi",
+      heroTitle:"Saçlarınıza <em>yeniden</em><br>doğal bir görünüm kazandırın",
+      heroSub:"Modern greft teknolojisi, ömür boyu garanti sertifikası ve ücretsiz konsültasyon — Estet Clinic ile güvenilir sonuç.",
+      heroBtnAI:"AI asistanla konuş", heroBtnPackages:"Paketleri görüntüle",
+      statPriceLabel:"başlangıç fiyatı", statYearNumber:"1 yıl", statYearLabel:"ücretsiz konsültasyon", statWarrantyLabel:"ömür boyu garanti",
+      trust1:"Ömür boyu garanti", trust2:"Uzman cerrahlar", trust3:"Ağrısız işlem", trust4:"7/24 açık",
+      calcEyebrow:"Hesaplayıcı", calcTitle:"Yaklaşık paketinizi öğrenin", calcDesc:"2 soruyu yanıtlayın — size uygun paketi yaklaşık olarak belirleyelim.",
+      calcQ1:"Saç dökülmesi hangi bölgede?", calcAreaForehead:"Alın çizgisi", calcAreaCrown:"Tepe bölgesi", calcAreaFull:"Geniş, genel alan",
+      calcQ2:"Ne kadar belirgin?", calcSevSmall:"Az", calcSevMedium:"Orta", calcSevLarge:"Fazla",
+      calcResultLabel:"Önerilen paket", calcCta:"AI asistandan detaylı bilgi al", calcRestart:"Yeniden hesapla",
+      pkgEyebrow:"Paketler", pkgTitle:"Size uygun planı seçin", pkgDesc:"Kesin greft sayısı ücretsiz konsültasyonda doktor tarafından belirlenir.",
+      featureHotel:"1 gecelik ücretsiz konaklama", featurePlasma2:"2 seans plazma tedavisi", featurePlasma3:"3 seans plazma tedavisi",
+      featureLab:"Laboratuvar tahlilleri", featureConsult:"1 yıl ücretsiz konsültasyon", featureWarranty:"Ömür boyu garanti sertifikası",
+      pkgCta:"Bu paket hakkında sor", badgeOptimal:"Optimal",
+      stepsEyebrow:"Süreç", stepsTitle:"4 adımda yeni saçlar",
+      step1Title:"Ücretsiz konsültasyon", step1Desc:"Doktor durumunuzu inceler ve kesin greft sayısını belirler.",
+      step2Title:"Plan ve tarih", step2Desc:"Size uygun paket ve operasyon tarihi belirlenir.",
+      step3Title:"Operasyon", step3Desc:"Modern yöntemle, ağrısız ve tek günlük işlem.",
+      step4Title:"Takip ve sonuç", step4Desc:"1 yıl boyunca ücretsiz konsültasyon ve ömür boyu garanti.",
+      contactTitle:"Ücretsiz konsültasyona kaydolun", contactDesc:"Uzmanımız sizinle iletişime geçip tüm sorularınızı yanıtlayacak.", contactBookBtn:"Randevu al",
+      tabHome:"Ana Sayfa", tabBooking:"Randevu", tabAI:"AI Asistan", tabRegister:"Kayıt", tabJobs:"Kariyer", tabLocation:"Konum",
+      aiHeaderTitle:"🤖 AI Asistan", aiHeaderDesc:"Sorunuzu yazın — saç ekimi hakkında tavsiye vereceğim",
+      aiInitMsg:"Merhaba! 🌿 Ben Estet Clinic'in AI asistanıyım. Saç ekimi ile ilgili sorularınızı yanıtlarım. Size nasıl yardımcı olabilirim?",
+      chipPrices:"💰 Fiyatlar", chipConsult:"📅 Konsültasyon", chipPain:"💉 Ağrılı mı olur?", chipHandoff:"👤 Bir yetkiliyle konuş",
+      referralTitle:"Arkadaşınızı davet edin", referralDesc:"Arkadaşınız sizin linkinizle gelirse, ikiniz de indirim kazanırsınız.", referralBtn:"Paylaş",
+      referralShareText:"Estet Clinic - saç ekim merkezi. Ücretsiz konsültasyon için bu bağlantıya tıklayın!", referralNeedTelegram:"Bu özellik yalnızca Telegram uygulaması içinde çalışır.",
+      handoffSent:"✅ Talebiniz operatöre iletildi. Kısa süre içinde sizinle iletişime geçilecek.",
+      quickPricesMsg:"Fiyatlar nasıl?", quickConsultMsg:"Ücretsiz konsültasyona kaydolmak istiyorum", quickPainMsg:"Operasyon ağrılı mı olur?",
+      chatPlaceholder:"Mesaj yazın...", chatErrorGeneric:"Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.",
+      chatErrorNetwork:"İnternet bağlantısında sorun var. Lütfen tekrar deneyin ya da +998 97 308-09-99 numarasını arayın.",
+      askPackageTemplate:"{name} paketi hakkında detaylı bilgi verin",
+      jobsTitle:"Kariyer fırsatları yakında", jobsDesc:"Şu anda açık pozisyon yok. Yeni ilanlar burada paylaşılacak — takipte kalın!",
+      locEyebrow:"Konum", locTitle:"Buhara, Okmasjid Caddesi 8/5", locDesc:"Klinik 7/24 açıktır. Başka şehirden gelen misafirler için yakın oteller aşağıda listelenmiştir.",
+      locOpenRoute:"Yol tarifini aç", hotelsEyebrow:"Yakın Oteller", hotelsTitle:"Kliniğe yakın konaklama yerleri",
+      hotelNote:"Fiyatlar sezona ve doluluğa göre değişir — kesin fiyatı telefonla sorabilirsiniz.",
+      bookEyebrow:"Randevu", bookTitle:"Ücretsiz konsültasyona kaydolun", bookDesc:"Gün ve saati seçin — operatörümüz onay için sizinle iletişime geçecek.",
+      slotLabel:"Saati seçin", bookSummaryLabel:"Seçilen zaman", bookNamePlaceholder:"Adınız", bookPhonePlaceholder:"Telefon numaranız (+998...)",
+      bookSubmitBtn:"Randevu al", bookSuccessTitle:"Randevu alındı!", bookSuccessDesc:"Operatörümüz kısa süre içinde sizinle iletişime geçip saati onaylayacak.",
+      bookFillFields:"Lütfen adınızı ve telefon numaranızı girin.", bookGenericError:"Bir hata oluştu. Lütfen tekrar deneyin.",
+      bookNetworkError:"İnternet bağlantı sorunu. +998 97 308-09-99 numarasını arayın.",
+      todayLabel:"Bugün", tomorrowLabel:"Yarın",
+      days:["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"], months:["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"],
+    },
+    tg: {
+      heroEyebrow:"Маркази ҷарроҳии зебоишиносӣ ва пластикӣ",
+      heroTitle:"Мӯйтонро <em>дубора</em><br>ба таври табиӣ барқарор кунед",
+      heroSub:"Технологияи муосири графт, сертификати кафолати умрбод ва машварати ройгон — бо Estet Clinic натиҷаи боэътимод.",
+      heroBtnAI:"Бо ёрдамчии AI сӯҳбат кунед", heroBtnPackages:"Пакетҳоро дидан",
+      statPriceLabel:"аз ин арзиш сар мешавад", statYearNumber:"1 сол", statYearLabel:"машварати ройгон", statWarrantyLabel:"кафолати умрбод",
+      trust1:"Кафолати умрбод", trust2:"Ҷарроҳони ботаҷриба", trust3:"Раванди бедард", trust4:"24 соат кушода",
+      calcEyebrow:"Ҳисобкунак", calcTitle:"Пакети тахминии худро донед", calcDesc:"Ба 2 савол ҷавоб диҳед — пакети мувофиқро тахминан муайян мекунем.",
+      calcQ1:"Дар кадом қисм мӯйрезӣ ҳаст?", calcAreaForehead:"Хатти пешона", calcAreaCrown:"Қисми боло", calcAreaFull:"Масоҳати васеъ",
+      calcQ2:"То чӣ андоза ҷиддист?", calcSevSmall:"Хурд", calcSevMedium:"Миёна", calcSevLarge:"Калон",
+      calcResultLabel:"Пакети тавсияшуда", calcCta:"Аз ёрдамчии AI муфассал пурсидан", calcRestart:"Аз нав ҳисоб кардан",
+      pkgEyebrow:"Пакетҳо", pkgTitle:"Нақшаи мувофиқро интихоб кунед", pkgDesc:"Шумораи дақиқи графт дар машварати ройгон аз ҷониби духтур муайян карда мешавад.",
+      featureHotel:"1 шабонарӯз меҳмонхонаи ройгон", featurePlasma2:"2 сеанси плазмотерапия", featurePlasma3:"3 сеанси плазмотерапия",
+      featureLab:"Таҳлилҳои лабораторӣ", featureConsult:"1 соли машварати ройгон", featureWarranty:"Сертификати кафолати умрбод",
+      pkgCta:"Дар бораи ин пакет пурсидан", badgeOptimal:"Мувофиқтарин",
+      stepsEyebrow:"Раванд", stepsTitle:"Дар 4 марҳала мӯйи нав",
+      step1Title:"Машварати ройгон", step1Desc:"Духтур ҳолати шуморо баррасӣ карда, шумораи дақиқи графтро муайян мекунад.",
+      step2Title:"Нақша ва сана", step2Desc:"Пакет ва санаи амалиёти мувофиқ ба шумо мувофиқа карда мешавад.",
+      step3Title:"Амалиёт", step3Desc:"Бо усули муосир, бедард ва дар як рӯз.",
+      step4Title:"Назорат ва натиҷа", step4Desc:"Дар давоми 1 сол машварати ройгон ва кафолати умрбод.",
+      contactTitle:"Ба машварати ройгон навишта шавед", contactDesc:"Мутахассиси мо бо шумо тамос гирифта, ба ҳамаи саволҳоятон ҷавоб медиҳад.", contactBookBtn:"Бронь кардан",
+      tabHome:"Саҳифаи асосӣ", tabBooking:"Бронь", tabAI:"Ёрдамчии AI", tabRegister:"Рӯйхат", tabJobs:"Ҷои кор", tabLocation:"Суроға",
+      aiHeaderTitle:"🤖 Ёрдамчии AI", aiHeaderDesc:"Саволатонро нависед — оид ба шинондани мӯй маслиҳат медиҳам",
+      aiInitMsg:"Ассалому алайкум! 🌿 Ман ёрдамчии AI-и Estet Clinic ҳастам. Ба саволҳои шумо оид ба шинондани мӯй ҷавоб медиҳам. Чӣ гуна ба шумо кӯмак карда метавонам?",
+      chipPrices:"💰 Нархҳо", chipConsult:"📅 Машварат", chipPain:"💉 Дардовар мешавад?", chipHandoff:"👤 Бо оператор гап задан",
+      referralTitle:"Дӯстатонро таклиф кунед", referralDesc:"Агар дӯстатон тавассути истиноди шумо ояд, ҳар дуятон тахфиф мегиред.", referralBtn:"Мубодила кардан",
+      referralShareText:"Estet Clinic - маркази шинондани мӯй. Барои машварати ройгон тавассути ин истинод ворид шавед!", referralNeedTelegram:"Ин функсия танҳо дар дохили барномаи Telegram кор мекунад.",
+      handoffSent:"✅ Дархости шумо ба оператор фиристода шуд. Ба зудӣ бо шумо тамос мегиранд.",
+      quickPricesMsg:"Нархҳо чӣ гунаанд?", quickConsultMsg:"Мехоҳам ба машварати ройгон навишта шавам", quickPainMsg:"Оё амалиёт дардовар мешавад?",
+      chatPlaceholder:"Паём нависед...", chatErrorGeneric:"Мебахшед, хатогӣ рух дод. Аз нав кӯшиш кунед.",
+      chatErrorNetwork:"Мушкилот бо пайвасти интернет. Лутфан аз нав кӯшиш кунед ё ба рақами +998 97 308-09-99 занг занед.",
+      askPackageTemplate:"Дар бораи пакети {name} муфассал нақл кунед",
+      jobsTitle:"Ҷойҳои кор ба наздикӣ", jobsDesc:"Ҳозир ҷои кори холӣ нест. Эълонҳои нав дар ин ҷо гузошта мешаванд — пайгирӣ кунед!",
+      locEyebrow:"Суроға", locTitle:"Бухоро, кӯчаи Оқмасҷид 8/5", locDesc:"Клиника 24 соат кушода аст. Барои меҳмонони аз шаҳрҳои дигар омада рӯйхати меҳмонхонаҳои наздик дар поён оварда шудааст.",
+      locOpenRoute:"Кушодани масир", hotelsEyebrow:"Меҳмонхонаҳои наздик", hotelsTitle:"Ҷойҳои истиқомат дар наздикии клиника",
+      hotelNote:"Нархҳо вобаста ба мавсим ва бандии утоқҳо тағйир меёбанд — нархи дақиқро тавассути телефон пурсида метавонед.",
+      bookEyebrow:"Бронь кардан", bookTitle:"Ба машварати ройгон навишта шавед", bookDesc:"Рӯз ва вақтро интихоб кунед — оператори мо барои тасдиқ бо шумо тамос мегирад.",
+      slotLabel:"Вақтро интихоб кунед", bookSummaryLabel:"Вақти интихобшуда", bookNamePlaceholder:"Номи шумо", bookPhonePlaceholder:"Рақами телефони шумо (+998...)",
+      bookSubmitBtn:"Бронь кардан", bookSuccessTitle:"Бронь қабул карда шуд!", bookSuccessDesc:"Оператори мо ба наздикӣ бо шумо тамос гирифта, вақтро тасдиқ мекунад.",
+      bookFillFields:"Лутфан, ном ва рақами телефони худро ворид кунед.", bookGenericError:"Хатогӣ рух дод. Лутфан аз нав кӯшиш кунед.",
+      bookNetworkError:"Мушкилот бо пайвасти интернет. Ба рақами +998 97 308-09-99 занг занед.",
+      todayLabel:"Имрӯз", tomorrowLabel:"Пагоҳ",
+      days:["Яшб","Дшб","Сшб","Чшб","Пшб","Ҷум","Шнб"], months:["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"],
+    },
+  };
+
+  let currentLang = localStorage.getItem('estet_lang') || 'uz';
+
+  function T(key){
+    return (TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][key]) || (TRANSLATIONS.uz[key] || '');
+  }
+
+  function applyLanguage(lang){
+    if (!TRANSLATIONS[lang]) return;
+    currentLang = lang;
+    localStorage.setItem('estet_lang', lang);
+    document.querySelectorAll('.nav-lang').forEach(el => el.textContent = LANG_LABELS[lang]);
+    document.querySelectorAll('[data-i18n]').forEach(el=>{
+      const key = el.dataset.i18n;
+      if (TRANSLATIONS[lang][key] !== undefined) el.textContent = TRANSLATIONS[lang][key];
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(el=>{
+      const key = el.dataset.i18nHtml;
+      if (TRANSLATIONS[lang][key] !== undefined) el.innerHTML = TRANSLATIONS[lang][key];
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+      const key = el.dataset.i18nPlaceholder;
+      if (TRANSLATIONS[lang][key] !== undefined) el.placeholder = TRANSLATIONS[lang][key];
+    });
+    document.querySelectorAll('.lang-option').forEach(el=>{
+      el.classList.toggle('is-selected', el.dataset.lang === lang);
+    });
+    // Bron kunlarini qayta chizish (til bo'yicha kun/oy nomlari)
+    selectedDayLabel = null; selectedTime = null;
+    const daySelectorEl = document.getElementById('daySelector');
+    if (daySelectorEl) daySelectorEl.innerHTML = '';
+    const slotGridEl = document.getElementById('slotGrid');
+    if (slotGridEl){ slotGridEl.innerHTML = ''; slotGridEl.style.display = 'none'; }
+    const bookingFormEl = document.getElementById('bookingForm');
+    if (bookingFormEl) bookingFormEl.style.display = 'none';
+    buildDaySelector();
+  }
+
+  function openLangModal(){ document.getElementById('langModalOverlay').classList.add('is-open'); }
+  function closeLangModalOutside(e){ if (e.target.id === 'langModalOverlay') e.target.classList.remove('is-open'); }
+  function chooseLang(code){ applyLanguage(code); document.getElementById('langModalOverlay').classList.remove('is-open'); }
+
+  function detectInitialLang(){
+    const saved = localStorage.getItem('estet_lang');
+    if (saved && TRANSLATIONS[saved]) return saved;
+    const tgLang = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.language_code : null;
+    if (tgLang && TRANSLATIONS[tgLang]) return tgLang;
+    return 'uz';
+  }
+
+  // ---------- MEHMONXONA -> XARITA ----------
+  function openHotelMap(lat, lng){
+    const url = `https://www.google.com/maps?q=${lat},${lng}`;
+    if (tg && tg.openLink) { tg.openLink(url); } else { window.open(url, '_blank'); }
+  }
+
+  // ---------- NARX KALKULYATORI ----------
+  const CALC_MAP = {
+    "forehead_small":"Minimum", "forehead_medium":"Minimum", "forehead_large":"Medium",
+    "crown_small":"Medium", "crown_medium":"Medium", "crown_large":"Maximum",
+    "full_small":"Maximum", "full_medium":"Maximum", "full_large":"Maximum+",
+  };
+  const PACKAGE_INFO = {
+    "Minimum":{price:"700$", grafts:"2.000–2.500"},
+    "Medium":{price:"900$", grafts:"2.600–3.500"},
+    "Maximum":{price:"1100$", grafts:"3.600–4.500"},
+    "Maximum+":{price:"1300$", grafts:"4.600–6.000"},
+  };
+  let calcArea = null, calcSeverity = null;
+
+  function calcSelectArea(area, el){
+    calcArea = area;
+    document.querySelectorAll('#calcStep1 .calc-opt').forEach(o=>o.classList.remove('is-active'));
+    el.classList.add('is-active');
+    document.getElementById('calcStep2').style.display = 'block';
+  }
+
+  function calcSelectSeverity(sev, el){
+    calcSeverity = sev;
+    document.querySelectorAll('#calcStep2 .calc-opt').forEach(o=>o.classList.remove('is-active'));
+    el.classList.add('is-active');
+    const pkg = CALC_MAP[`${calcArea}_${calcSeverity}`];
+    if (!pkg) return;
+    const info = PACKAGE_INFO[pkg];
+    document.getElementById('calcResultName').textContent = pkg;
+    document.getElementById('calcResultPrice').textContent = `${info.price} (${info.grafts} graft)`;
+    document.getElementById('calcResult').style.display = 'block';
+    trackPackageInterest(pkg);
+  }
+
+  function calcGoToAI(){
+    askAboutPackage(document.getElementById('calcResultName').textContent);
+  }
+
+  function calcReset(){
+    calcArea = null; calcSeverity = null;
+    document.querySelectorAll('.calc-opt').forEach(o=>o.classList.remove('is-active'));
+    document.getElementById('calcStep2').style.display = 'none';
+    document.getElementById('calcResult').style.display = 'none';
+  }
+
+  function backendConfigured(){
+    return !!API_BASE && API_BASE.indexOf('SIZNING-RENDER') === -1;
+  }
+
+  // ---------- REFERRAL (DO'STNI TAKLIF QILISH) ----------
+  const BOT_USERNAME = "estetklinikbot";
+
+  function shareReferral(){
+    const uid = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : null;
+    if (!uid){
+      alert(T('referralNeedTelegram'));
+      return;
+    }
+    const link = `https://t.me/${BOT_USERNAME}?start=ref_${uid}`;
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(T('referralShareText'))}`;
+    if (tg && tg.openLink) { tg.openLink(shareUrl); } else { window.open(shareUrl, '_blank'); }
+  }
+
+  // ---------- OPERATOR BILAN BOG'LANISH (HANDOFF) ----------
+  function requestHandoff(){
+    if (!backendConfigured()){
+      addBubble("⚠️ Dasturchi uchun: API_BASE hali sozlanmagan.", 'bot');
+      return;
+    }
+    const uid = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : null;
+    const uname = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.username : "";
+    const lastMsg = chatHistory.length ? chatHistory[chatHistory.length - 1].content : "";
+    addBubble(T('chipHandoff'), 'user');
+    fetch(API_BASE + '/api/handoff', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ user_id: uid, username: uname, last_message: lastMsg })
+    })
+      .then(()=> addBubble(T('handoffSent'), 'bot'))
+      .catch(()=> addBubble(T('chatErrorNetwork'), 'bot'));
+  }
+
   // ======== ADMIN RO'YXATI (Telegram ID) ========
   // bot.py dagi ADMIN_CHAT_IDS bilan BIR XIL raqamlarni shu yerga yozing
-  const ADMIN_IDS = [1388809938]; // <-- o'z Telegram ID'ingizga almashtiring (bir nechta bo'lsa vergul bilan: [111, 222])
+  const ADMIN_IDS = [123456789]; // <-- o'z Telegram ID'ingizga almashtiring (bir nechta bo'lsa vergul bilan: [111, 222])
 
   function isAdminUser(){
     try {
@@ -558,16 +964,20 @@
   }
 
   function initChat(){
-    addBubble("Assalomu alaykum! 🌿 Men Estet Clinic'ning AI yordamchisiman. Soch ekish bo'yicha savollaringizga javob beraman. Sizga qanday yordam bera olaman?", 'bot');
+    addBubble(T('aiInitMsg'), 'bot');
   }
 
   async function callBackend(userText){
+    if (!backendConfigured()){
+      addBubble("⚠️ Dasturchi uchun: API_BASE hali sozlanmagan.", 'bot');
+      return;
+    }
     const typingEl = addTyping();
     try {
       const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ message: userText, history: chatHistory, lang: 'uz' })
+        body: JSON.stringify({ message: userText, history: chatHistory, lang: currentLang })
       });
       const data = await res.json();
       typingEl.remove();
@@ -576,11 +986,11 @@
         chatHistory.push({role:'user', content:userText});
         chatHistory.push({role:'assistant', content:data.reply});
       } else {
-        addBubble("Kechirasiz, xatolik yuz berdi. Qaytadan urinib ko'ring.", 'bot');
+        addBubble(T('chatErrorGeneric'), 'bot');
       }
     } catch(err){
       typingEl.remove();
-      addBubble("Internet aloqasi bilan muammo. Iltimos qaytadan urinib ko'ring yoki +998 97 308-09-99 raqamiga qo'ng'iroq qiling.", 'bot');
+      addBubble(T('chatErrorNetwork'), 'bot');
     }
   }
 
@@ -599,13 +1009,21 @@
   }
 
   function askAboutPackage(name){
+    trackPackageInterest(name);
     switchTab('ai');
-    setTimeout(()=>sendQuickMessage(`${name} paketi haqida batafsil aytib bering`), 200);
+    setTimeout(()=>sendQuickMessage(T('askPackageTemplate').replace('{name}', name)), 200);
+  }
+
+  function trackPackageInterest(name){
+    if (!backendConfigured()) return;
+    fetch(API_BASE + '/api/track-package', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ package: name })
+    }).catch(()=>{});
   }
 
   // ---------- BRON QILISH LOGIKASI ----------
-  const DAYS_UZ = ["Yak","Dush","Sesh","Chor","Pay","Jum","Shan"];
-  const MONTHS_UZ = ["yan","fev","mar","apr","may","iyun","iyul","avg","sen","okt","noy","dek"];
   const TIME_SLOTS = ["09:00","11:00","13:00","15:00","17:00"];
   let selectedDayLabel = null, selectedTime = null;
 
@@ -616,11 +1034,13 @@
     for (let i=0;i<7;i++){
       const d = new Date(today);
       d.setDate(today.getDate()+i);
-      const shortLabel = i===0 ? "Bugun" : i===1 ? "Ertaga" : DAYS_UZ[d.getDay()];
+      const dayNames = TRANSLATIONS[currentLang].days;
+      const monthNames = TRANSLATIONS[currentLang].months;
+      const shortLabel = i===0 ? T('todayLabel') : i===1 ? T('tomorrowLabel') : dayNames[d.getDay()];
       const chip = document.createElement('div');
       chip.className = 'day-chip';
       chip.textContent = shortLabel + " " + d.getDate();
-      chip.dataset.value = `${d.getDate()}-${MONTHS_UZ[d.getMonth()]}`;
+      chip.dataset.value = `${d.getDate()}-${monthNames[d.getMonth()]}`;
       chip.onclick = () => selectDay(chip);
       holder.appendChild(chip);
     }
@@ -660,7 +1080,7 @@
     const name = document.getElementById('bookName').value.trim();
     const phone = document.getElementById('bookPhone').value.trim();
     if (!name || !phone){
-      addBubbleAlert("Iltimos, ism va telefon raqamingizni kiriting.");
+      addBubbleAlert(T('bookFillFields'));
       return;
     }
     try {
@@ -674,10 +1094,10 @@
         document.getElementById('bookingStep1').style.display = 'none';
         document.getElementById('bookingSuccess').style.display = 'flex';
       } else {
-        addBubbleAlert("Xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.");
+        addBubbleAlert(T('bookGenericError'));
       }
     } catch(err){
-      addBubbleAlert("Internet aloqasi bilan muammo. +998 97 308-09-99 raqamiga qo'ng'iroq qiling.");
+      addBubbleAlert(T('bookNetworkError'));
     }
   }
 
@@ -685,7 +1105,7 @@
     alert(text);
   }
 
-  buildDaySelector();
+  applyLanguage(detectInitialLang());
 
   // ---------- RO'YXATDAN O'TISH LOGIKASI ----------
   async function submitRegister(){
@@ -696,6 +1116,7 @@
     const passport = document.getElementById('regPassport').value.trim();
     const pkg = document.getElementById('regPackage').value;
     const note = document.getElementById('regNote').value.trim();
+    const opDate = document.getElementById('regOpDate').value;
 
     if (!name || !phone || !address){
       alert("Iltimos, kamida F.I.Sh, telefon va manzilni to'ldiring.");
@@ -706,7 +1127,7 @@
       const res = await fetch(API_BASE + '/api/register', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ name, phone, birth, address, passport, package: pkg, note })
+        body: JSON.stringify({ name, phone, birth, address, passport, package: pkg, note, operation_date: opDate })
       });
       const data = await res.json();
       if (data.success){
