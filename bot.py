@@ -644,6 +644,31 @@ async def stats_handler(message: Message):
     )
     await message.answer(text)
 
+# ============ ADMIN: MIJOZGA JAVOB YOZISH (/reply) ============
+@dp.message(Command("reply"))
+async def reply_handler(message: Message):
+    # Ruxsat: ADMIN_CHAT_IDS ro'yxatidagi shaxsiy foydalanuvchi YOKI belgilangan guruh (MANAGER_CHAT_ID) ichida
+    is_admin_user = bool(ADMIN_CHAT_IDS) and str(message.from_user.id) in ADMIN_CHAT_IDS
+    is_manager_chat = bool(MANAGER_CHAT_ID) and str(message.chat.id) == str(MANAGER_CHAT_ID)
+    if not (is_admin_user or is_manager_chat):
+        return
+
+    parts = (message.text or "").split(maxsplit=2)
+    if len(parts) < 3:
+        await message.reply("Foydalanish: /reply <user_id> <xabar matni>\nMasalan: /reply 123456789 Salom, sizga qanday yordam bera olaman?")
+        return
+
+    target_id_str, reply_text = parts[1], parts[2]
+    if not target_id_str.isdigit():
+        await message.reply("❌ user_id raqam bo'lishi kerak.")
+        return
+
+    try:
+        await bot.send_message(int(target_id_str), f"👤 Operator:\n{reply_text}")
+        await message.reply("✅ Xabar mijozga yuborildi.")
+    except Exception as e:
+        await message.reply(f"❌ Xabar yuborilmadi: {e}\n(Mijoz botni bloklagan yoki hech qachon /start bosmagan bo'lishi mumkin.)")
+
 # ============ FOLLOW-UP: JAVOBSIZ MIJOZLARGA ESLATMA ============
 async def followup_checker():
     while True:
@@ -892,12 +917,13 @@ async def handle_handoff_api(request):
     username = body.get("username") or ""
     last_message = (body.get("last_message") or "").strip()
 
-    contact_line = f"@{username}" if username else f"ID: {user_id} (username yo'q — telefon raqami suhbatda so'ralishi kerak)"
+    contact_line = f"@{username}" if username else "username yo'q"
     text = (
         f"🙋 MIJOZ OPERATOR BILAN GAPLASHISHNI SO'RADI\n"
-        f"Foydalanuvchi: {contact_line}\n"
+        f"Foydalanuvchi: {contact_line} (ID: {user_id})\n"
         f"So'nggi xabari: {last_message or '-'}\n"
-        f"Vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        f"Vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
+        f"👉 Javob berish uchun: /reply {user_id} xabaringiz"
     )
     if MANAGER_CHAT_ID:
         try:
