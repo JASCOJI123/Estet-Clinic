@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import json
+import re
 import sqlite3
 from datetime import datetime, timedelta
 
@@ -286,11 +287,17 @@ SUHBAT USLUBI:
 - Emoji me'yorida (✅ 📍 📞)
 
 SUHBATNI YAKUNLASH:
-Ism va telefon olingach:
+Faqat foydalanuvchi o'zining HAQIQIY ismini VA HAQIQIY telefon raqamini aniq yozganidan keyingina:
 "Rahmat! Ma'lumotlaringizni mutaxassisimizga yubordim. Tez orada siz bilan bog'lanishadi. 📞 Shoshilinch bo'lsa: +998 97 308-09-99"
 
-Agar foydalanuvchi ism va telefon raqamini bergan bo'lsa, javobingning OXIRIGA aniq shu formatda maxsus qator qo'sh (foydalanuvchiga ko'rinmasin, faqat tizim uchun):
+Javobingning OXIRIGA aniq shu formatda maxsus qator qo'sh (foydalanuvchiga ko'rinmasin, faqat tizim uchun):
 [LEAD_CAPTURED: ism=<ism>, telefon=<raqam>]
+
+QATTIQ QOIDALAR (buzilishi mumkin emas):
+- Bu qatorni HECH QACHON bo'sh yoki taxminiy qiymatlar bilan yozma (masalan "ism=, telefon=" yoki "ism=mijoz, telefon=noma'lum" — bularning barchasi QATʼIYAN TAQIQLANGAN).
+- Bu qatorni faqat ISM VA TELEFON RAQAMI ikkalasi ham foydalanuvchi tomonidan matnda aniq, to'liq yozilgan bo'lsagina qo'sh.
+- Agar foydalanuvchi hali ism yoki telefon bermagan bo'lsa (masalan faqat "Bepul konsultatsiya olmoqchiman" yoki "Narxlar qanday?" degan bo'lsa) — bu qatorni QO'SHMA, buning o'rniga avval ism va telefonni so'ra.
+- Bitta suhbatda bu qatorni faqat BIR MARTA, ma'lumot birinchi marta to'liq berilganda yoz.
 """
 
 VISION_PROMPT = """Bu odam boshining rasmi. Sochsizlik holatini umumiy tarzda tasvirlab ber (masalan: "peshona chizig'i orqaga tortilgan", "tepa qismda yupqalashish bor", "keng maydonda sochsizlik" kabi). Aniq tibbiy diagnoz qo'yma, faqat vizual tavsif ber, 2-3 gap."""
@@ -522,6 +529,16 @@ async def voice_handler(message: Message, state: FSMContext):
     history.append({"role": "user", "content": text})
     await run_llm_and_reply(message, state, history, lang)
 
+def is_valid_lead_info(info: str) -> bool:
+    """LEAD_CAPTURED formatidagi ism va telefon haqiqatan ham to'ldirilganini tekshiradi.
+    Bo'sh yoki taxminiy (masalan 'noma'lum') qiymatlarni rad etadi."""
+    name_match = re.search(r"ism=([^,]*)", info)
+    phone_match = re.search(r"telefon=([^,]*)", info)
+    name = name_match.group(1).strip() if name_match else ""
+    phone = phone_match.group(1).strip() if phone_match else ""
+    phone_digits = re.sub(r"\D", "", phone)
+    return bool(name) and len(phone_digits) >= 7
+
 # ============ LLM CHAQIRUV VA JAVOB YUBORISH (umumiy funksiya) ============
 async def run_llm_and_reply(message: Message, state: FSMContext, history: list, lang: str):
     groq_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
@@ -537,7 +554,10 @@ async def run_llm_and_reply(message: Message, state: FSMContext, history: list, 
         visible_part, lead_part = reply_text.split("[LEAD_CAPTURED:", 1)
         lead_info = lead_part.replace("]", "").strip()
         reply_text = visible_part.strip()
-        await notify_manager(message, lead_info)
+        if is_valid_lead_info(lead_info):
+            await notify_manager(message, lead_info)
+        else:
+            logging.warning(f"Bo'sh/noto'g'ri LEAD_CAPTURED e'tiborga olinmadi: {lead_info}")
 
     history.append({"role": "assistant", "content": reply_text})
     await state.update_data(history=history)
@@ -743,24 +763,29 @@ async def handle_chat_api(request):
     lead_info = None
     if "[LEAD_CAPTURED:" in reply_text:
         visible_part, lead_part = reply_text.split("[LEAD_CAPTURED:", 1)
-        lead_info = lead_part.replace("]", "").strip()
+        candidate_lead_info = lead_part.replace("]", "").strip()
         reply_text = visible_part.strip()
 
-        if MANAGER_CHAT_ID:
-            try:
-                await bot.send_message(
-                    MANAGER_CHAT_ID,
-                    f"🆕 YANGI LEAD (Mini App)\n{lead_info}\nVaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                )
-            except Exception as e:
-                logging.error(f"Mini App lead xabarini yuborishda xato: {e}")
+        if is_valid_lead_info(candidate_lead_info):
+            lead_info = candidate_lead_info
 
-        mark_lead(int(webapp_user_id) if str(webapp_user_id).isdigit() else 0, webapp_username, lead_info, source="webapp-chat")
+            if MANAGER_CHAT_ID:
+                try:
+                    await bot.send_message(
+                        MANAGER_CHAT_ID,
+                        f"🆕 YANGI LEAD (Mini App)\n{lead_info}\nVaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                    )
+                except Exception as e:
+                    logging.error(f"Mini App lead xabarini yuborishda xato: {e}")
 
-        append_lead_to_sheet([
-            datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "webapp", webapp_username, lead_info,
-        ])
+            mark_lead(int(webapp_user_id) if str(webapp_user_id).isdigit() else 0, webapp_username, lead_info, source="webapp-chat")
+
+            append_lead_to_sheet([
+                datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "webapp", webapp_username, lead_info,
+            ])
+        else:
+            logging.warning(f"Bo'sh/noto'g'ri LEAD_CAPTURED e'tiborga olinmadi (webapp): {candidate_lead_info}")
 
     return web.json_response({"reply": reply_text, "lead": lead_info})
 
