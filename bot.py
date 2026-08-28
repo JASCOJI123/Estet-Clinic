@@ -544,6 +544,25 @@ async def run_llm_and_reply(message: Message, state: FSMContext, history: list, 
 
     await message.answer(reply_text)
 
+# ============ GOOGLE SHEETS YORDAMCHISI ============
+def append_lead_to_sheet(row: list):
+    """Har qanday lead manbaidan (chat/bron/ro'yxat) Google jadvalga qator qo'shadi.
+    GOOGLE_CREDS_JSON (Render uchun, xavfsizroq) yoki GOOGLE_CREDS_FILE (lokal fayl) ishlatiladi."""
+    if not GOOGLE_SHEET_ID:
+        return
+    try:
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds_json = os.environ.get("GOOGLE_CREDS_JSON")
+        if creds_json:
+            creds = Credentials.from_service_account_info(json.loads(creds_json), scopes=scopes)
+        else:
+            creds = Credentials.from_service_account_file(GOOGLE_CREDS_FILE, scopes=scopes)
+        gc = gspread.authorize(creds)
+        sheet = gc.open_by_key(GOOGLE_SHEET_ID).sheet1
+        sheet.append_row(row)
+    except Exception as e:
+        logging.error(f"Google Sheets xatosi: {e}")
+
 # ============ OPERATORGA SIGNAL + GOOGLE SHEETS ============
 async def notify_referrer_if_any(user_id: int):
     """Agar bu mijoz kimningdir taklifi orqali kelgan bo'lsa, taklif qiluvchiga va adminga xabar beradi."""
@@ -582,20 +601,12 @@ async def notify_manager(message: Message, lead_info: str):
     mark_lead(user.id, user.username or "", lead_info, source="telegram-chat")
     await notify_referrer_if_any(user.id)
 
-    if GOOGLE_SHEET_ID:
-        try:
-            scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-            creds = Credentials.from_service_account_file(GOOGLE_CREDS_FILE, scopes=scopes)
-            gc = gspread.authorize(creds)
-            sheet = gc.open_by_key(GOOGLE_SHEET_ID).sheet1
-            sheet.append_row([
-                datetime.now().strftime("%Y-%m-%d %H:%M"),
-                str(user.id),
-                user.username or "-",
-                lead_info,
-            ])
-        except Exception as e:
-            logging.error(f"Google Sheets xatosi: {e}")
+    append_lead_to_sheet([
+        datetime.now().strftime("%Y-%m-%d %H:%M"),
+        str(user.id),
+        user.username or "-",
+        lead_info,
+    ])
 
 # ============ ADMIN: STATISTIKA ============
 @dp.message(Command("stats"))
@@ -746,18 +757,10 @@ async def handle_chat_api(request):
 
         mark_lead(int(webapp_user_id) if str(webapp_user_id).isdigit() else 0, webapp_username, lead_info, source="webapp-chat")
 
-        if GOOGLE_SHEET_ID:
-            try:
-                scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-                creds = Credentials.from_service_account_file(GOOGLE_CREDS_FILE, scopes=scopes)
-                gc = gspread.authorize(creds)
-                sheet = gc.open_by_key(GOOGLE_SHEET_ID).sheet1
-                sheet.append_row([
-                    datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "webapp", webapp_username, lead_info,
-                ])
-            except Exception as e:
-                logging.error(f"Google Sheets xatosi (webapp): {e}")
+        append_lead_to_sheet([
+            datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "webapp", webapp_username, lead_info,
+        ])
 
     return web.json_response({"reply": reply_text, "lead": lead_info})
 
@@ -789,18 +792,10 @@ async def handle_book_api(request):
 
     mark_lead(0, name, info, source="webapp-booking")
 
-    if GOOGLE_SHEET_ID:
-        try:
-            scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-            creds = Credentials.from_service_account_file(GOOGLE_CREDS_FILE, scopes=scopes)
-            gc = gspread.authorize(creds)
-            sheet = gc.open_by_key(GOOGLE_SHEET_ID).sheet1
-            sheet.append_row([
-                datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "webapp-booking", name, info,
-            ])
-        except Exception as e:
-            logging.error(f"Google Sheets xatosi (booking): {e}")
+    append_lead_to_sheet([
+        datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "webapp-booking", name, info,
+    ])
 
     return web.json_response({"success": True})
 
@@ -842,18 +837,10 @@ async def handle_register_api(request):
     mark_lead(0, name, info, source="webapp-register")
     save_registration(name, phone, birth, address, passport, package, note, operation_date)
 
-    if GOOGLE_SHEET_ID:
-        try:
-            scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-            creds = Credentials.from_service_account_file(GOOGLE_CREDS_FILE, scopes=scopes)
-            gc = gspread.authorize(creds)
-            sheet = gc.open_by_key(GOOGLE_SHEET_ID).sheet1
-            sheet.append_row([
-                datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "webapp-register", name, info,
-            ])
-        except Exception as e:
-            logging.error(f"Google Sheets xatosi (register): {e}")
+    append_lead_to_sheet([
+        datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "webapp-register", name, info,
+    ])
 
     return web.json_response({"success": True})
 
