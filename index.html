@@ -592,7 +592,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
   // ======== SOZLAMA: backend API manzili (deploy qilingach shu yerga qo'ying) ========
-  const API_BASE = "https://estet-clinic.onrender.com";
+  const API_BASE = "https://SIZNING-RENDER-MANZILINGIZ.onrender.com";
 
   // ---------- Telegram Mini App bootstrap ----------
   const tg = window.Telegram ? window.Telegram.WebApp : null;
@@ -632,7 +632,7 @@
       chipPrices:"💰 Narxlar", chipConsult:"📅 Konsultatsiya", chipPain:"💉 Og'riqli bo'ladimi?", chipHandoff:"👤 Odam bilan gaplashish",
       referralTitle:"Do'stingizni taklif qiling", referralDesc:"Do'stingiz sizning havolangiz orqali kelsa, ikkalangiz ham chegirmaga ega bo'lasiz.", referralBtn:"Ulashish",
       referralShareText:"Estet Clinic - soch ekish markazi. Bepul konsultatsiya uchun shu havola orqali kiring!", referralNeedTelegram:"Bu funksiya faqat Telegram ilovasi ichida ishlaydi.",
-      handoffSent:"✅ So'rovingiz operatorga yuborildi. Tez orada siz bilan bog'lanishadi.",
+      handoffSent:"✅ So'rovingiz operatorga yuborildi. Operator botning asosiy (Telegram) chatiga javob yozadi — Mini App'ni yopib, botning oddiy suhbat oynasini tekshiring.",
       quickPricesMsg:"Narxlar qanday?", quickConsultMsg:"Bepul konsultatsiyaga yozilmoqchiman", quickPainMsg:"Operatsiya og'riqli bo'ladimi?",
       chatPlaceholder:"Xabar yozing...", chatErrorGeneric:"Kechirasiz, xatolik yuz berdi. Qaytadan urinib ko'ring.",
       chatErrorNetwork:"Internet aloqasi bilan muammo. Iltimos qaytadan urinib ko'ring yoki +998 97 308-09-99 raqamiga qo'ng'iroq qiling.",
@@ -676,7 +676,7 @@
       chipPrices:"💰 Цены", chipConsult:"📅 Консультация", chipPain:"💉 Будет больно?", chipHandoff:"👤 Поговорить с человеком",
       referralTitle:"Пригласите друга", referralDesc:"Если друг придёт по вашей ссылке, вы оба получите скидку.", referralBtn:"Поделиться",
       referralShareText:"Estet Clinic - центр пересадки волос. Перейдите по этой ссылке для бесплатной консультации!", referralNeedTelegram:"Эта функция работает только внутри приложения Telegram.",
-      handoffSent:"✅ Ваш запрос отправлен оператору. Скоро с вами свяжутся.",
+      handoffSent:"✅ Ваш запрос отправлен оператору. Оператор ответит в основном чате Telegram-бота — закройте Mini App и проверьте обычный чат бота.",
       quickPricesMsg:"Какие у вас цены?", quickConsultMsg:"Хочу записаться на бесплатную консультацию", quickPainMsg:"Операция будет болезненной?",
       chatPlaceholder:"Напишите сообщение...", chatErrorGeneric:"Извините, произошла ошибка. Попробуйте ещё раз.",
       chatErrorNetwork:"Проблема с подключением к интернету. Попробуйте ещё раз или позвоните по номеру +998 97 308-09-99.",
@@ -720,7 +720,7 @@
       chipPrices:"💰 Fiyatlar", chipConsult:"📅 Konsültasyon", chipPain:"💉 Ağrılı mı olur?", chipHandoff:"👤 Bir yetkiliyle konuş",
       referralTitle:"Arkadaşınızı davet edin", referralDesc:"Arkadaşınız sizin linkinizle gelirse, ikiniz de indirim kazanırsınız.", referralBtn:"Paylaş",
       referralShareText:"Estet Clinic - saç ekim merkezi. Ücretsiz konsültasyon için bu bağlantıya tıklayın!", referralNeedTelegram:"Bu özellik yalnızca Telegram uygulaması içinde çalışır.",
-      handoffSent:"✅ Talebiniz operatöre iletildi. Kısa süre içinde sizinle iletişime geçilecek.",
+      handoffSent:"✅ Talebiniz operatöre iletildi. Operatör botun ana Telegram sohbetinden yanıt verecek — Mini App'i kapatıp botun normal sohbet penceresini kontrol edin.",
       quickPricesMsg:"Fiyatlar nasıl?", quickConsultMsg:"Ücretsiz konsültasyona kaydolmak istiyorum", quickPainMsg:"Operasyon ağrılı mı olur?",
       chatPlaceholder:"Mesaj yazın...", chatErrorGeneric:"Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.",
       chatErrorNetwork:"İnternet bağlantısında sorun var. Lütfen tekrar deneyin ya da +998 97 308-09-99 numarasını arayın.",
@@ -764,7 +764,7 @@
       chipPrices:"💰 Нархҳо", chipConsult:"📅 Машварат", chipPain:"💉 Дардовар мешавад?", chipHandoff:"👤 Бо оператор гап задан",
       referralTitle:"Дӯстатонро таклиф кунед", referralDesc:"Агар дӯстатон тавассути истиноди шумо ояд, ҳар дуятон тахфиф мегиред.", referralBtn:"Мубодила кардан",
       referralShareText:"Estet Clinic - маркази шинондани мӯй. Барои машварати ройгон тавассути ин истинод ворид шавед!", referralNeedTelegram:"Ин функсия танҳо дар дохили барномаи Telegram кор мекунад.",
-      handoffSent:"✅ Дархости шумо ба оператор фиристода шуд. Ба зудӣ бо шумо тамос мегиранд.",
+      handoffSent:"✅ Дархости шумо ба оператор фиристода шуд. Оператор дар чати асосии Telegram-и бот ҷавоб медиҳад — Mini App-ро пӯшида, чати оддии ботро тафтиш кунед.",
       quickPricesMsg:"Нархҳо чӣ гунаанд?", quickConsultMsg:"Мехоҳам ба машварати ройгон навишта шавам", quickPainMsg:"Оё амалиёт дардовар мешавад?",
       chatPlaceholder:"Паём нависед...", chatErrorGeneric:"Мебахшед, хатогӣ рух дод. Аз нав кӯшиш кунед.",
       chatErrorNetwork:"Мушкилот бо пайвасти интернет. Лутфан аз нав кӯшиш кунед ё ба рақами +998 97 308-09-99 занг занед.",
@@ -1038,11 +1038,16 @@
       return;
     }
     const typingEl = addTyping();
+    const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
     try {
       const res = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ message: userText, history: chatHistory, lang: currentLang })
+        body: JSON.stringify({
+          message: userText, history: chatHistory, lang: currentLang,
+          user_id: tgUser ? tgUser.id : 0,
+          username: tgUser ? (tgUser.username || '') : '',
+        })
       });
       const data = await res.json();
       typingEl.remove();

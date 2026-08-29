@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
+from aiogram.dispatcher.event.bases import SkipHandler
 from aiogram.types import (
     Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove,
     InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo,
@@ -89,6 +90,7 @@ def init_db():
     for alter_sql in [
         "ALTER TABLE users ADD COLUMN referred_by INTEGER",
         "ALTER TABLE leads ADD COLUMN source TEXT",
+        "ALTER TABLE users ADD COLUMN handoff_active INTEGER DEFAULT 0",
     ]:
         try:
             c.execute(alter_sql)
@@ -119,6 +121,29 @@ def get_referrer(user_id: int):
     row = c.fetchone()
     conn.close()
     return row[0] if row and row[0] else None
+
+def set_handoff(user_id: int, active: bool):
+    """Mijozni 'operator bilan jonli suhbat' rejimiga qo'yadi yoki chiqaradi."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("UPDATE users SET handoff_active=? WHERE user_id=?", (1 if active else 0, user_id))
+    if c.rowcount == 0:
+        # Foydalanuvchi hali users jadvalida yo'q bo'lsa (kamdan-kam holat)
+        now = datetime.now().isoformat()
+        c.execute(
+            "INSERT INTO users (user_id, username, started_at, last_message_at, handoff_active) VALUES (?,?,?,?,?)",
+            (user_id, "", now, now, 1 if active else 0),
+        )
+    conn.commit()
+    conn.close()
+
+def is_handoff_active(user_id: int) -> bool:
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT handoff_active FROM users WHERE user_id=?", (user_id,))
+    row = c.fetchone()
+    conn.close()
+    return bool(row and row[0])
 
 def track_package_interest(package: str):
     today = datetime.now().strftime("%Y-%m-%d")
@@ -303,6 +328,13 @@ QATTIQ QOIDALAR (buzilishi mumkin emas):
 
 VISION_PROMPT = """Bu odam boshining rasmi. Sochsizlik holatini umumiy tarzda tasvirlab ber (masalan: "peshona chizig'i orqaga tortilgan", "tepa qismda yupqalashish bor", "keng maydonda sochsizlik" kabi). Aniq tibbiy diagnoz qo'yma, faqat vizual tavsif ber, 2-3 gap."""
 
+HANDOFF_WAITING_MSG = {
+    "uz": "✅ Xabaringiz operatorga yuborildi. Operator botning asosiy chatiga javob yozadi — iltimos, shu yerni kuzatib turing.",
+    "ru": "✅ Ваше сообщение отправлено оператору. Оператор ответит в основном чате бота — пожалуйста, проверьте его.",
+    "tr": "✅ Mesajınız operatöre iletildi. Operatör botun ana sohbetinden yanıt verecek — lütfen orayı kontrol edin.",
+    "tg": "✅ Паёми шумо ба оператор фиристода шуд. Оператор дар чати асосии бот ҷавоб медиҳад — лутфан онро назорат кунед.",
+}
+
 # ============ HOLAT (FSM) ============
 class Chat(StatesGroup):
     talking = State()
@@ -428,6 +460,29 @@ async def quick_reply_handler(callback):
     text = QUICK_REPLY_TEXT[callback.data][lang]
     await callback.message.answer(text)
     await callback.answer()
+
+# ============ OPERATOR REJIMI: MIJOZ XABARINI OPERATORGA UZATISH ============
+@dp.message(F.text, ~F.text.startswith("/"))
+async def handoff_relay_handler(message: Message, state: FSMContext):
+    """Agar mijoz 'Odam bilan gaplashish' rejimida bo'lsa, xabarini AI o'rniga
+    to'g'ridan-to'g'ri operator guruhiga yuboradi. Aks holda oddiy AI oqimiga o'tkazadi."""
+    if not is_handoff_active(message.from_user.id):
+        raise SkipHandler
+
+    touch_user(message.from_user.id, message.from_user.username or "")
+
+    if MANAGER_CHAT_ID:
+        try:
+            await bot.send_message(
+                MANAGER_CHAT_ID,
+                f"💬 MIJOZDAN XABAR (operator rejimi)\n"
+                f"👤 @{message.from_user.username or '-'} (ID: {message.from_user.id})\n"
+                f"✉️ {message.text}\n\n"
+                f"👉 Javob: /reply {message.from_user.id} xabar\n"
+                f"✅ Yakunlash: /done {message.from_user.id}",
+            )
+        except Exception as e:
+            logging.error(f"Handoff relay xatosi: {e}")
 
 # ============ ASOSIY SUHBAT (LLM orqali) ============
 @dp.message(Chat.talking, F.text)
@@ -691,9 +746,31 @@ async def reply_handler(message: Message):
 
     try:
         await bot.send_message(int(target_id_str), f"👤 Operator:\n{reply_text}")
+        set_handoff(int(target_id_str), True)  # javob berilgan mijoz avtomatik operator rejimida qoladi
         await message.reply("✅ Xabar mijozga yuborildi.")
     except Exception as e:
         await message.reply(f"❌ Xabar yuborilmadi: {e}\n(Mijoz botni bloklagan yoki hech qachon /start bosmagan bo'lishi mumkin.)")
+
+# ============ ADMIN: SUHBATNI AI'GA QAYTARISH (/done) ============
+@dp.message(Command("done"))
+async def done_handler(message: Message):
+    is_admin_user = bool(ADMIN_CHAT_IDS) and str(message.from_user.id) in ADMIN_CHAT_IDS
+    is_manager_chat = bool(MANAGER_CHAT_ID) and str(message.chat.id) == str(MANAGER_CHAT_ID)
+    if not (is_admin_user or is_manager_chat):
+        return
+
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].isdigit():
+        await message.reply("Foydalanish: /done <user_id>")
+        return
+
+    target_id = int(parts[1])
+    set_handoff(target_id, False)
+    await message.reply(f"✅ {target_id} uchun operator rejimi yopildi — endi AI yordamchi ishlaydi.")
+    try:
+        await bot.send_message(target_id, "✅ Suhbat AI yordamchiga qaytarildi. Savolingiz bo'lsa yozing.")
+    except Exception:
+        pass
 
 # ============ FOLLOW-UP: JAVOBSIZ MIJOZLARGA ESLATMA ============
 async def followup_checker():
@@ -814,6 +891,22 @@ async def handle_chat_api(request):
 
     if not user_text:
         return web.json_response({"error": "message_required"}, status=400)
+
+    if str(webapp_user_id).isdigit() and int(webapp_user_id) != 0 and is_handoff_active(int(webapp_user_id)):
+        if MANAGER_CHAT_ID:
+            try:
+                await bot.send_message(
+                    MANAGER_CHAT_ID,
+                    f"💬 MIJOZDAN XABAR (Mini App, operator rejimi)\n"
+                    f"👤 @{webapp_username} (ID: {webapp_user_id})\n"
+                    f"✉️ {user_text}\n\n"
+                    f"👉 Javob: /reply {webapp_user_id} xabar\n"
+                    f"✅ Yakunlash: /done {webapp_user_id}",
+                )
+            except Exception as e:
+                logging.error(f"Handoff forward xatosi (webapp): {e}")
+        waiting_msg = HANDOFF_WAITING_MSG.get(lang, HANDOFF_WAITING_MSG["uz"])
+        return web.json_response({"reply": waiting_msg, "lead": None})
 
     history = list(history) + [{"role": "user", "content": user_text}]
     groq_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
@@ -970,13 +1063,17 @@ async def handle_handoff_api(request):
     username = body.get("username") or ""
     last_message = (body.get("last_message") or "").strip()
 
+    if str(user_id).isdigit():
+        set_handoff(int(user_id), True)
+
     contact_line = f"@{username}" if username else "username yo'q"
     text = (
         f"🙋 MIJOZ OPERATOR BILAN GAPLASHISHNI SO'RADI\n"
         f"Foydalanuvchi: {contact_line} (ID: {user_id})\n"
         f"So'nggi xabari: {last_message or '-'}\n"
         f"Vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
-        f"👉 Javob berish uchun: /reply {user_id} xabaringiz"
+        f"👉 Javob berish uchun: /reply {user_id} xabaringiz\n"
+        f"✅ Yakunlash uchun: /done {user_id}"
     )
     if MANAGER_CHAT_ID:
         try:
