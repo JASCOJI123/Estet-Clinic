@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Estet Clinic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --bg:#FFFFFF; --bg-soft:#F6F7F3; --ink:#14181A; --ink-muted:#767D78;
+    --forest:#1B4332; --forest-light:#2F6F4E; --gold:#B08D57; --line:#E7E5DE;
+    --radius:20px;
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bottom:env(safe-area-inset-bottom,0px);
+    --tabbar-h:64px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg); color:var(--ink); font-family:'Manrope',sans-serif;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    padding-top:var(--safe-top);
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:0 22px;}
+  @media (min-width:640px){ .wrap{max-width:620px;} }
+  h1,h2,h3,.display{font-family:'Unbounded',sans-serif;letter-spacing:-0.01em;}
+  a{color:inherit;text-decoration:none;}
+
+  /* ---------- PAGES / TABS ---------- */
+  .page{display:none;padding-bottom:calc(var(--tabbar-h) + var(--safe-bottom) + 24px);min-height:100vh;}
+  .page.is-active{display:block;}
+
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0 8px;}
+  .brand{display:flex;align-items:center;gap:9px;font-family:'Unbounded',sans-serif;font-weight:600;font-size:15px;}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--forest);}
+  .nav-lang{font-size:12px;font-weight:700;color:var(--ink);border:1.5px solid var(--line);border-radius:100px;padding:6px 13px;cursor:pointer;}
+
+  /* ---------- TIL MODAL ---------- */
+  .lang-modal-overlay{position:fixed;inset:0;background:rgba(20,24,26,0.5);z-index:100;display:none;align-items:flex-end;justify-content:center;}
+  .lang-modal-overlay.is-open{display:flex;}
+  .lang-modal{background:#fff;border-radius:24px 24px 0 0;padding:10px 22px calc(26px + var(--safe-bottom));width:100%;max-width:480px;}
+  @media (min-width:640px){ .lang-modal{max-width:620px;border-radius:24px;margin-bottom:40px;} .lang-modal-overlay{align-items:center;} }
+  .lang-modal-handle{width:36px;height:4px;background:var(--line);border-radius:100px;margin:0 auto 18px;}
+  .lang-modal-title{font-size:15px;font-weight:800;margin-bottom:14px;}
+  .lang-option{display:flex;align-items:center;gap:12px;padding:14px 4px;font-size:15px;font-weight:600;border-bottom:1px solid var(--line);cursor:pointer;}
+  .lang-option:last-child{border-bottom:none;}
+  .lang-option .flag{font-size:20px;}
+  .lang-option.is-selected{color:var(--forest);}
+
+  /* ---------- HERO (Bosh sahifa) ---------- */
+  .hero{position:relative;padding-top:22px;}
+  .hero-canvas-holder{position:absolute; inset:-40px -22px auto -22px; height:320px; z-index:0; pointer-events:none;}
+  #heroCanvas{width:100%;height:100%;display:block;}
+  .hero-content{position:relative;z-index:1;padding-top:222px;}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--forest); font-weight:700;background:rgba(27,67,50,0.06); border:1px solid rgba(27,67,50,0.14);padding:7px 13px;border-radius:100px;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);}
+  h1.hero-title{font-size:32px;line-height:1.12;font-weight:800;margin-top:18px;}
+  h1.hero-title em{font-style:normal; color:var(--forest);background:linear-gradient(180deg, transparent 62%, rgba(176,141,87,.28) 62%);}
+  .hero-sub{margin-top:16px;font-size:15px;line-height:1.6;color:var(--ink-muted);max-width:38ch;}
+  .hero-actions{display:flex;flex-direction:column;gap:12px;margin-top:24px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:15px 22px;border-radius:100px;font-family:'Manrope',sans-serif;font-weight:700;font-size:14.5px;border:none;cursor:pointer;transition:transform .15s ease;width:100%;}
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--forest);color:#fff;box-shadow:0 10px 24px -8px rgba(27,67,50,.55);}
+  .btn-secondary{background:transparent;color:var(--ink);border:1.5px solid var(--line);}
+  .btn svg{width:16px;height:16px;flex-shrink:0;}
+  .stat-row{display:flex;gap:22px;margin-top:28px;padding-top:20px;border-top:1px solid var(--line);}
+  .stat b{display:block;font-family:'Unbounded',sans-serif;font-size:19px;color:var(--forest);}
+  .stat span{display:block;font-size:11px;color:var(--ink-muted);margin-top:4px;line-height:1.3;}
+
+  .section{padding:52px 0 8px;}
+  .section-head{margin-bottom:24px;}
+  .section-eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:800;}
+  .section-title{font-size:22px;font-weight:800;margin-top:9px;line-height:1.25;}
+  .section-desc{font-size:14px;color:var(--ink-muted);margin-top:9px;line-height:1.6;}
+
+  .packages{display:flex;flex-direction:column;gap:14px;}
+  .card{border:1.5px solid var(--line);border-radius:var(--radius);padding:22px;position:relative;overflow:hidden;background:var(--bg);}
+  .card.is-max{border-color:var(--forest);background:linear-gradient(180deg,#fff, var(--bg-soft));}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .card-name{font-family:'Unbounded',sans-serif;font-weight:600;font-size:14.5px;}
+  .card-grafts{font-size:11.5px;color:var(--ink-muted);margin-top:4px;}
+  .card-price{font-family:'Unbounded',sans-serif;font-weight:800;font-size:24px;color:var(--forest);white-space:nowrap;}
+  .card-feats{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:9px;}
+  .card-feats li{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45;}
+  .card-feats li svg{width:15px;height:15px;flex-shrink:0;margin-top:1px;}
+  .feat-yes svg{color:var(--forest);}
+  .feat-no{color:var(--ink-muted);}
+  .feat-no svg{color:#C7CBC8;}
+  .card-cta{margin-top:18px;width:100%;padding:12px;border-radius:100px;border:1.5px solid var(--ink); background:transparent; color:var(--ink);font-family:'Manrope',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
+  .card.is-max .card-cta{background:var(--forest);border-color:var(--forest);color:#fff;}
+  .badge{position:absolute;top:0;right:0;background:var(--gold);color:#fff;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:6px 14px;border-radius:0 0 0 14px;}
+
+  /* ---------- KALKULYATOR ---------- */
+  .calc-card{border:1.5px solid var(--line);border-radius:var(--radius);padding:22px;}
+  .calc-question{font-size:14px;font-weight:700;margin-bottom:12px;}
+  .calc-options{display:flex;flex-direction:column;gap:10px;}
+  .calc-opt{padding:14px 16px;border:1.5px solid var(--line);border-radius:14px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .calc-opt.is-active{background:var(--forest);color:#fff;border-color:var(--forest);}
+  .calc-result-card{background:var(--bg-soft);border-radius:16px;padding:18px;text-align:center;}
+  .calc-result-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-muted);font-weight:700;}
+  .calc-result-name{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:800;color:var(--forest);margin-top:8px;}
+  .calc-result-price{font-size:14px;color:var(--ink-muted);margin-top:4px;}
+
+  .steps{display:flex;flex-direction:column;}
+  .step{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--line);}
+  .step:last-child{border-bottom:none;}
+  .step-num{font-family:'Unbounded',sans-serif;font-weight:800;font-size:12.5px;color:var(--forest);width:32px;height:32px;border-radius:50%;border:1.5px solid var(--forest);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .step-title{font-weight:700;font-size:14px;}
+  .step-desc{font-size:12.5px;color:var(--ink-muted);margin-top:4px;line-height:1.5;}
+
+  .trust{display:flex;gap:14px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none;}
+  .trust::-webkit-scrollbar{display:none;}
+  .trust-item{flex:0 0 auto;background:var(--bg-soft);border-radius:14px;padding:13px 16px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:7px;white-space:nowrap;}
+  .trust-item svg{width:14px;height:14px;color:var(--forest);}
+
+  .contact-card{background:var(--forest);color:#fff;border-radius:24px;padding:28px 22px;margin-top:6px;position:relative;overflow:hidden;}
+  .contact-card::before{content:"";position:absolute;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle, rgba(176,141,87,.35), transparent 70%);top:-90px;right:-70px;}
+  .contact-title{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;position:relative;}
+  .contact-desc{font-size:13px;opacity:.8;margin-top:8px;line-height:1.55;position:relative;max-width:34ch;}
+  .contact-phones{display:flex;flex-direction:column;gap:8px;margin-top:18px;position:relative;}
+  .contact-phones a{font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:9px;}
+  .contact-phones svg{width:15px;height:15px;color:var(--gold);}
+  .contact-card .btn{margin-top:20px;position:relative;}
+  .contact-card .btn-primary{background:#fff;color:var(--forest);box-shadow:none;}
+
+  footer{padding:24px 0 20px;text-align:center;}
+  footer p{font-size:11px;color:var(--ink-muted);}
+
+  .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease, transform .6s ease;}
+  .reveal.is-visible{opacity:1;transform:translateY(0);}
+
+  /* ---------- AI YORDAMCHI (chat) ---------- */
+  .chat-page{display:flex;flex-direction:column;height:100vh;}
+  .chat-header{padding:18px 22px 14px;border-bottom:1px solid var(--line);}
+  .chat-header h2{font-size:17px;font-weight:800;}
+  .chat-header p{font-size:12px;color:var(--ink-muted);margin-top:3px;}
+  .chat-body{flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12px;}
+  .msg{max-width:82%;padding:11px 15px;border-radius:16px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;}
+  .msg.bot{background:var(--bg-soft);align-self:flex-start;border-bottom-left-radius:4px;}
+  .msg.user{background:var(--forest);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
+  .msg.typing{display:flex;gap:4px;align-items:center;padding:14px 16px;}
+  .msg.typing span{width:6px;height:6px;border-radius:50%;background:var(--ink-muted);animation:blink 1.2s infinite;}
+  .msg.typing span:nth-child(2){animation-delay:.2s;}
+  .msg.typing span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,80%,100%{opacity:.25;}40%{opacity:1;}}
+  .chat-suggest{display:flex;gap:8px;overflow-x:auto;padding:0 22px 12px;scrollbar-width:none;}
+  .chat-suggest::-webkit-scrollbar{display:none;}
+  .chip{flex:0 0 auto;background:var(--bg-soft);border:1px solid var(--line);border-radius:100px;padding:9px 14px;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer;}
+  .chat-input-bar{display:flex;gap:10px;padding:12px 22px calc(14px + var(--safe-bottom));border-top:1px solid var(--line);background:#fff;}
+  .chat-input-bar input{flex:1;border:1.5px solid var(--line);border-radius:100px;padding:12px 18px;font-family:'Manrope',sans-serif;font-size:14px;outline:none;}
+  .chat-input-bar input:focus{border-color:var(--forest);}
+  .send-btn{width:44px;height:44px;border-radius:50%;background:var(--forest);border:none;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;}
+  .send-btn svg{width:18px;height:18px;}
+
+  /* ---------- BRON QILISH ---------- */
+  .day-scroll{display:flex;gap:10px;overflow-x:auto;padding:4px 0 6px;scrollbar-width:none;margin-top:4px;}
+  .day-scroll::-webkit-scrollbar{display:none;}
+  .day-chip{flex:0 0 auto;padding:12px 16px;border-radius:14px;border:1.5px solid var(--line);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .day-chip.is-active{background:var(--forest);color:#fff;border-color:var(--forest);}
+  .slot-label{font-size:12px;font-weight:700;color:var(--ink-muted);margin-top:20px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;}
+  .slot-grid{display:none;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .slot-btn{padding:14px 0;text-align:center;border-radius:14px;border:1.5px solid var(--line);font-size:13.5px;font-weight:700;cursor:pointer;}
+  .slot-btn.is-active{background:var(--forest);color:#fff;border-color:var(--forest);}
+  .book-input{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;font-family:'Manrope',sans-serif;font-size:14px;outline:none;}
+  .book-input:focus{border-color:var(--forest);}
+  .book-summary{background:var(--bg-soft);border-radius:14px;padding:14px 16px;font-size:13px;margin-top:18px;display:flex;justify-content:space-between;}
+  .book-summary b{color:var(--forest);}
+
+  /* ---------- RO'YXATDAN O'TISH ---------- */
+  .form-group{margin-top:12px;}
+  .form-label{font-size:12px;font-weight:700;color:var(--ink-muted);margin-bottom:7px;display:block;}
+  select.book-input{appearance:none;background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23767D78" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 14px center;background-size:16px;}
+  textarea.book-input{resize:none;min-height:80px;font-family:'Manrope',sans-serif;line-height:1.5;}
+
+  /* ---------- VAKANSIYA ---------- */
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:90px 30px 40px;}
+  .empty-state .icon{width:72px;height:72px;border-radius:50%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;margin-bottom:20px;}
+  .empty-state .icon svg{width:32px;height:32px;color:var(--forest);}
+  .empty-state h3{font-size:17px;font-weight:800;}
+  .empty-state p{font-size:13.5px;color:var(--ink-muted);margin-top:8px;max-width:30ch;line-height:1.55;}
+
+  /* ---------- MANZIL ---------- */
+  .map-frame{width:100%;height:220px;border:none;border-radius:var(--radius);margin-top:4px;}
+  .hotel-list{display:flex;flex-direction:column;gap:12px;margin-top:18px;}
+  .hotel-card{border:1.5px solid var(--line);border-radius:16px;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;}
+  .hotel-info h4{font-size:14px;font-weight:700;}
+  .hotel-meta{display:flex;gap:10px;margin-top:5px;font-size:11.5px;color:var(--ink-muted);align-items:center;}
+  .hotel-meta .rating{color:var(--gold);font-weight:700;}
+  .hotel-call{width:38px;height:38px;border-radius:50%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .hotel-call svg{width:16px;height:16px;color:var(--forest);}
+  .hotel-note{font-size:12px;color:var(--ink-muted);margin-top:14px;line-height:1.5;padding:12px 14px;background:var(--bg-soft);border-radius:12px;}
+
+  /* ---------- TAB BAR ---------- */
+  .tabbar{
+    position:fixed;left:0;right:0;bottom:0;height:calc(var(--tabbar-h) + var(--safe-bottom));
+    background:#fff;border-top:1px solid var(--line);
+    display:flex;align-items:stretch;justify-content:space-around;
+    padding-bottom:var(--safe-bottom); z-index:50;
+    max-width:480px;margin:0 auto;
+  }
+  @media (min-width:640px){ .tabbar{max-width:620px;} }
+  .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;color:var(--ink-muted);cursor:pointer;font-family:'Manrope',sans-serif;padding:0 2px;}
+  .tab-btn svg{width:19px;height:19px;}
+  .tab-btn span{font-size:9px;font-weight:700;}
+  .tab-btn.is-active{color:var(--forest);}
+
+  @media (prefers-reduced-motion: reduce){ .reveal{transition:none;opacity:1;transform:none;} html{scroll-behavior:auto;} }
+</style>
+</head>
+<body>
+
+<!-- ================= TAB 1: BOSH SAHIFA ================= -->
+<div class="page is-active" id="page-home">
+  <div class="wrap">
+    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div><div class="nav-lang" onclick="openLangModal()">UZ</div></nav>
+
+    <section class="hero">
+      <div class="hero-canvas-holder"><canvas id="heroCanvas"></canvas></div>
+      <div class="hero-content">
+        <span class="eyebrow"><span class="dot"></span><span data-i18n="heroEyebrow">Estetik va plastik jarrohlik markazi</span></span>
+        <h1 class="hero-title" data-i18n-html="heroTitle">Sochingizni <em>qaytadan</em><br>tabiiy tarzda tiklang</h1>
+        <p class="hero-sub" data-i18n="heroSub">Zamonaviy graft texnologiyasi, umrlik kafolat sertifikati va bepul konsultatsiya — Estet Clinic bilan ishonchli natija.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary" onclick="switchTab('ai')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg>
+            <span data-i18n="heroBtnAI">AI yordamchi bilan gaplashish</span>
+          </button>
+          <a href="#" class="btn btn-secondary" data-i18n="heroBtnPackages" onclick="document.getElementById('packages').scrollIntoView({behavior:'smooth'});return false;">Paketlarni ko'rish</a>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><b>700$</b><span data-i18n="statPriceLabel">dan boshlanadi</span></div>
+          <div class="stat"><b data-i18n="statYearNumber">1 yil</b><span data-i18n="statYearLabel">bepul konsultatsiya</span></div>
+          <div class="stat"><b>∞</b><span data-i18n="statWarrantyLabel">umrlik kafolat</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="trust reveal">
+      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="trust1">Umrlik kafolat</span></div>
+      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="trust2">Malakali jarrohlar</span></div>
+      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="trust3">Og'riqsiz jarayon</span></div>
+      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="trust4">24 soat ochiq</span></div>
+    </div>
+
+    <section class="section" style="padding-bottom:0;">
+      <div class="section-head reveal">
+        <span class="section-eyebrow" data-i18n="calcEyebrow">Kalkulyator</span>
+        <h2 class="section-title" data-i18n="calcTitle">Taxminiy paketingizni bilib oling</h2>
+        <p class="section-desc" data-i18n="calcDesc">2 ta savolga javob bering — sizga mos paketni taxminiy aniqlaymiz.</p>
+      </div>
+      <div class="calc-card reveal">
+        <div id="calcStep1">
+          <div class="calc-question" data-i18n="calcQ1">Qaysi qismda sochsizlik bor?</div>
+          <div class="calc-options">
+            <div class="calc-opt" onclick="calcSelectArea('forehead', this)" data-i18n="calcAreaForehead">Peshona chizig'i</div>
+            <div class="calc-opt" onclick="calcSelectArea('crown', this)" data-i18n="calcAreaCrown">Tepa qism</div>
+            <div class="calc-opt" onclick="calcSelectArea('full', this)" data-i18n="calcAreaFull">Umumiy, keng maydon</div>
+          </div>
+        </div>
+        <div id="calcStep2" style="display:none;margin-top:18px;">
+          <div class="calc-question" data-i18n="calcQ2">Qanchalik jiddiy?</div>
+          <div class="calc-options">
+            <div class="calc-opt" onclick="calcSelectSeverity('small', this)" data-i18n="calcSevSmall">Kichik</div>
+            <div class="calc-opt" onclick="calcSelectSeverity('medium', this)" data-i18n="calcSevMedium">O'rta</div>
+            <div class="calc-opt" onclick="calcSelectSeverity('large', this)" data-i18n="calcSevLarge">Katta</div>
+          </div>
+        </div>
+        <div id="calcResult" style="display:none;margin-top:20px;">
+          <div class="calc-result-card">
+            <div class="calc-result-label" data-i18n="calcResultLabel">Tavsiya etilgan paket</div>
+            <div class="calc-result-name" id="calcResultName"></div>
+            <div class="calc-result-price" id="calcResultPrice"></div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:14px;" onclick="calcGoToAI()" data-i18n="calcCta">AI yordamchidan batafsil so'rash</button>
+          <button class="btn btn-secondary" style="margin-top:10px;" onclick="calcReset()" data-i18n="calcRestart">Qaytadan hisoblash</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="packages">
+      <div class="section-head reveal">
+        <span class="section-eyebrow" data-i18n="pkgEyebrow">Paketlar</span>
+        <h2 class="section-title" data-i18n="pkgTitle">Sizga mos rejani tanlang</h2>
+        <p class="section-desc" data-i18n="pkgDesc">Aniq graft soni bepul konsultatsiyada shifokor tomonidan belgilanadi.</p>
+      </div>
+      <div class="packages">
+        <div class="card reveal">
+          <div class="card-top"><div><div class="card-name">Minimum</div><div class="card-grafts">2.000–2.500 graft</div></div><div class="card-price">700$</div></div>
+          <ul class="card-feats">
+            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span data-i18n="featureHotel">1 kunlik bepul mehmonxona</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featurePlasma2">2 seans plazmoterapiya</span></li>
+            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span data-i18n="featureLab">Laboratoriya analizlari</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureConsult">1 yillik bepul konsultatsiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureWarranty">Umrlik kafolat sertifikati</span></li>
+          </ul>
+          <button class="card-cta" onclick="askAboutPackage('Minimum')" data-i18n="pkgCta">Shu paket haqida so'rash</button>
+        </div>
+        <div class="card reveal">
+          <div class="card-top"><div><div class="card-name">Medium</div><div class="card-grafts">2.600–3.500 graft</div></div><div class="card-price">900$</div></div>
+          <ul class="card-feats">
+            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span data-i18n="featureHotel">1 kunlik bepul mehmonxona</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featurePlasma2">2 seans plazmoterapiya</span></li>
+            <li class="feat-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span data-i18n="featureLab">Laboratoriya analizlari</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureConsult">1 yillik bepul konsultatsiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureWarranty">Umrlik kafolat sertifikati</span></li>
+          </ul>
+          <button class="card-cta" onclick="askAboutPackage('Medium')" data-i18n="pkgCta">Shu paket haqida so'rash</button>
+        </div>
+        <div class="card is-max reveal">
+          <span class="badge" data-i18n="badgeOptimal">Optimal</span>
+          <div class="card-top"><div><div class="card-name">Maximum</div><div class="card-grafts">3.600–4.500 graft</div></div><div class="card-price">1100$</div></div>
+          <ul class="card-feats">
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureHotel">1 kunlik bepul mehmonxona</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featurePlasma3">3 seans plazmoterapiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureLab">Laboratoriya analizlari</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureConsult">1 yillik bepul konsultatsiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureWarranty">Umrlik kafolat sertifikati</span></li>
+          </ul>
+          <button class="card-cta" onclick="askAboutPackage('Maximum')" data-i18n="pkgCta">Shu paket haqida so'rash</button>
+        </div>
+        <div class="card reveal">
+          <div class="card-top"><div><div class="card-name">Maximum+</div><div class="card-grafts">4.600–6.000 graft</div></div><div class="card-price">1300$</div></div>
+          <ul class="card-feats">
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureHotel">1 kunlik bepul mehmonxona</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featurePlasma3">3 seans plazmoterapiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureLab">Laboratoriya analizlari</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureConsult">1 yillik bepul konsultatsiya</span></li>
+            <li class="feat-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="featureWarranty">Umrlik kafolat sertifikati</span></li>
+          </ul>
+          <button class="card-cta" onclick="askAboutPackage('Maximum+')" data-i18n="pkgCta">Shu paket haqida so'rash</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head reveal"><span class="section-eyebrow" data-i18n="stepsEyebrow">Jarayon</span><h2 class="section-title" data-i18n="stepsTitle">4 bosqichda yangi soch</h2></div>
+      <div class="steps reveal">
+        <div class="step"><div class="step-num">01</div><div><div class="step-title" data-i18n="step1Title">Bepul konsultatsiya</div><div class="step-desc" data-i18n="step1Desc">Shifokor holatingizni ko'rib chiqadi va aniq graft sonini belgilaydi.</div></div></div>
+        <div class="step"><div class="step-num">02</div><div><div class="step-title" data-i18n="step2Title">Reja va sana</div><div class="step-desc" data-i18n="step2Desc">Sizga mos paket va operatsiya sanasi kelishiladi.</div></div></div>
+        <div class="step"><div class="step-num">03</div><div><div class="step-title" data-i18n="step3Title">Operatsiya</div><div class="step-desc" data-i18n="step3Desc">Zamonaviy usulda, og'riqsiz va bir kunlik jarayon.</div></div></div>
+        <div class="step"><div class="step-num">04</div><div><div class="step-title" data-i18n="step4Title">Kuzatuv va natija</div><div class="step-desc" data-i18n="step4Desc">1 yil davomida bepul konsultatsiya va umrlik kafolat.</div></div></div>
+      </div>
+    </section>
+
+    <section class="section" id="contact">
+      <div class="contact-card reveal">
+        <div class="contact-title" data-i18n="contactTitle">Bepul konsultatsiyaga yoziling</div>
+        <p class="contact-desc" data-i18n="contactDesc">Mutaxassisimiz siz bilan bog'lanib, barcha savollaringizga javob beradi.</p>
+        <div class="contact-phones">
+          <a href="tel:+998973080999"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+998 97 308-09-99</a>
+          <a href="tel:+998973009019"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+998 97 300-90-19</a>
+        </div>
+        <button class="btn btn-primary" data-i18n="contactBookBtn" onclick="switchTab('booking')">Bron qilish</button>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:22px;">
+      <div class="card reveal" style="text-align:center;padding:28px 22px;">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;color:var(--forest);"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+        </div>
+        <h3 data-i18n="referralTitle" style="font-size:16px;font-weight:800;">Do'stingizni taklif qiling</h3>
+        <p data-i18n="referralDesc" style="font-size:13px;color:var(--ink-muted);margin-top:8px;line-height:1.55;">Do'stingiz sizning havolangiz orqali kelsa, ikkalangiz ham chegirmaga ega bo'lasiz.</p>
+        <button class="btn btn-secondary" data-i18n="referralBtn" style="margin-top:16px;" onclick="shareReferral()">Ulashish</button>
+      </div>
+    </section>
+
+    <footer>
+      <p>© Estet Clinic — Estetik va plastik jarrohlik markazi</p>
+      <p style="margin-top:8px;"><a href="#" onclick="openAdminModal();return false;" style="font-size:11px;color:var(--ink-muted);text-decoration:underline;">🔐 Admin</a></p>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= TAB 2: AI YORDAMCHI ================= -->
+<div class="page" id="page-ai">
+  <div class="chat-page">
+    <div class="chat-header">
+      <h2 data-i18n="aiHeaderTitle">🤖 AI Yordamchi</h2>
+      <p data-i18n="aiHeaderDesc">Savolingizni yozing — soch ekish bo'yicha maslahat beraman</p>
+    </div>
+    <div class="chat-body" id="chatBody"></div>
+    <div class="chat-suggest" id="chatSuggest">
+      <div class="chip" data-i18n="chipPrices" onclick="sendQuickMessage(T('quickPricesMsg'))">💰 Narxlar</div>
+      <div class="chip" data-i18n="chipConsult" onclick="sendQuickMessage(T('quickConsultMsg'))">📅 Konsultatsiya</div>
+      <div class="chip" data-i18n="chipPain" onclick="sendQuickMessage(T('quickPainMsg'))">💉 Og'riqli bo'ladimi?</div>
+      <div class="chip" data-i18n="chipHandoff" onclick="requestHandoff()">👤 Odam bilan gaplashish</div>
+    </div>
+    <div class="chat-input-bar">
+      <input type="text" id="chatInput" data-i18n-placeholder="chatPlaceholder" placeholder="Xabar yozing..." onkeydown="if(event.key==='Enter')sendMessage();">
+      <button class="send-btn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TAB: BRON QILISH ================= -->
+<div class="page" id="page-booking">
+  <div class="wrap">
+    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div><div class="nav-lang" onclick="openLangModal()">UZ</div></nav>
+    <section class="section" style="padding-top:8px;">
+      <div class="section-head reveal">
+        <span class="section-eyebrow" data-i18n="bookEyebrow">Bron qilish</span>
+        <h2 class="section-title" data-i18n="bookTitle">Bepul konsultatsiyaga yoziling</h2>
+        <p class="section-desc" data-i18n="bookDesc">Kun va vaqtni tanlang — operatorimiz tasdiqlash uchun siz bilan bog'lanadi.</p>
+      </div>
+
+      <div id="bookingStep1">
+        <div class="day-scroll" id="daySelector"></div>
+        <div class="slot-label" data-i18n="slotLabel">Vaqtni tanlang</div>
+        <div class="slot-grid" id="slotGrid"></div>
+
+        <div id="bookingForm" style="display:none;margin-top:22px;">
+          <div class="book-summary"><span data-i18n="bookSummaryLabel">Tanlangan vaqt</span><b id="bookSummaryText"></b></div>
+          <input type="text" id="bookName" class="book-input" data-i18n-placeholder="bookNamePlaceholder" placeholder="Ismingiz" style="margin-top:16px;">
+          <input type="tel" id="bookPhone" class="book-input" data-i18n-placeholder="bookPhonePlaceholder" placeholder="Telefon raqamingiz (+998...)" style="margin-top:10px;">
+          <button class="btn btn-primary" id="bookSubmitBtn" style="margin-top:14px;" onclick="submitBooking()" data-i18n="bookSubmitBtn">Bron qilish</button>
+        </div>
+      </div>
+
+      <div id="bookingSuccess" class="empty-state" style="display:none;">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <h3 data-i18n="bookSuccessTitle">Bron qabul qilindi!</h3>
+        <p data-i18n="bookSuccessDesc">Operatorimiz tez orada siz bilan bog'lanib, vaqtni tasdiqlaydi.</p>
+      </div>
+    </section>
+    <footer><p>© Estet Clinic — Estetik va plastik jarrohlik markazi</p></footer>
+  </div>
+</div>
+
+<!-- ================= TAB: RO'YXATDAN O'TISH ================= -->
+<div class="page" id="page-register">
+  <div class="wrap">
+    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div><div class="nav-lang" onclick="openLangModal()">UZ</div></nav>
+    <section class="section" style="padding-top:8px;">
+      <div class="section-head reveal">
+        <span class="section-eyebrow">Ro'yxatdan o'tish</span>
+        <h2 class="section-title">Mijoz ma'lumotlarini kiriting</h2>
+        <p class="section-desc">Klinikaga tashrif buyurgan mijoz uchun to'liq ma'lumot shakli.</p>
+      </div>
+
+      <div id="registerStep1">
+        <div class="form-group">
+          <span class="form-label">F.I.SH (to'liq ism)</span>
+          <input type="text" id="regName" class="book-input" placeholder="Familiya Ism Sharif">
+        </div>
+        <div class="form-group">
+          <span class="form-label">Telefon raqami</span>
+          <input type="tel" id="regPhone" class="book-input" placeholder="+998...">
+        </div>
+        <div class="form-group">
+          <span class="form-label">Tug'ilgan sana</span>
+          <input type="date" id="regBirth" class="book-input">
+        </div>
+        <div class="form-group">
+          <span class="form-label">Manzil</span>
+          <input type="text" id="regAddress" class="book-input" placeholder="Shahar, tuman, ko'cha">
+        </div>
+        <div class="form-group">
+          <span class="form-label">Pasport / ID raqami <span style="font-weight:400;">(ixtiyoriy)</span></span>
+          <input type="text" id="regPassport" class="book-input" placeholder="AA1234567">
+        </div>
+        <div class="form-group">
+          <span class="form-label">Qiziqqan paket</span>
+          <select id="regPackage" class="book-input">
+            <option value="Aniqlanmagan">Hali aniqlanmagan</option>
+            <option value="Minimum">Minimum — 700$</option>
+            <option value="Medium">Medium — 900$</option>
+            <option value="Maximum">Maximum — 1100$</option>
+            <option value="Maximum+">Maximum+ — 1300$</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <span class="form-label">Qo'shimcha eslatma <span style="font-weight:400;">(ixtiyoriy)</span></span>
+          <textarea id="regNote" class="book-input" placeholder="Masalan: allergiya, maxsus istak va h.k."></textarea>
+        </div>
+        <div class="form-group">
+          <span class="form-label">Amaliyot sanasi <span style="font-weight:400;">(agar bo'lgan/rejalashtirilgan bo'lsa)</span></span>
+          <input type="date" id="regOpDate" class="book-input">
+        </div>
+        <button class="btn btn-primary" id="regSubmitBtn" style="margin-top:18px;" onclick="submitRegister()">Ro'yxatga olish</button>
+      </div>
+
+      <div id="registerSuccess" class="empty-state" style="display:none;">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <h3>Mijoz ro'yxatga olindi!</h3>
+        <p>Ma'lumotlar klinika bazasiga yuborildi.</p>
+      </div>
+    </section>
+    <footer><p>© Estet Clinic — Estetik va plastik jarrohlik markazi</p></footer>
+  </div>
+</div>
+
+<!-- ================= TAB 3: VAKANSIYA ================= -->
+<div class="page" id="page-jobs">
+  <div class="wrap">
+    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div><div class="nav-lang" onclick="openLangModal()">UZ</div></nav>
+    <div class="empty-state">
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+      <h3 data-i18n="jobsTitle">Vakansiyalar tez kunda</h3>
+      <p data-i18n="jobsDesc">Hozircha ochiq ish o'rinlari yo'q. Yangi vakansiyalar shu yerda e'lon qilinadi — kuzatib boring!</p>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TAB 4: MANZIL ================= -->
+<div class="page" id="page-location">
+  <div class="wrap">
+    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div><div class="nav-lang" onclick="openLangModal()">UZ</div></nav>
+    <section class="section" style="padding-top:8px;">
+      <div class="section-head reveal">
+        <span class="section-eyebrow" data-i18n="locEyebrow">Manzil</span>
+        <h2 class="section-title" data-i18n="locTitle">Buxoro, Oqmasjid ko'chasi 8/5</h2>
+        <p class="section-desc" data-i18n="locDesc">Klinika 24 soat ochiq. Boshqa shahardan kelayotgan mijozlar uchun yaqin mehmonxonalar ro'yxati quyida.</p>
+      </div>
+      <iframe class="map-frame" src="https://www.google.com/maps?q=39.783288,64.448354&hl=uz&z=16&output=embed" loading="lazy"></iframe>
+      <a href="https://yandex.com/maps/10330/bukhara/house/oqmasjid_ko_chasi_8_5/Yk0YcgNnQEMPQF1jfXt5cn1gZg==/" target="_blank" class="btn btn-secondary" data-i18n="locOpenRoute" style="margin-top:14px;">Yo'l xaritasini ochish</a>
+    </section>
+
+    <section class="section" style="padding-top:36px;">
+      <div class="section-head reveal">
+        <span class="section-eyebrow" data-i18n="hotelsEyebrow">Yaqin mehmonxonalar</span>
+        <h2 class="section-title" data-i18n="hotelsTitle">Klinikaga yaqin turar joylar</h2>
+      </div>
+      <div class="hotel-list">
+        <div class="hotel-card" onclick="openHotelMap(39.774995,64.4428545)"><div class="hotel-info"><h4>Grand Ark Bukhara</h4><div class="hotel-meta"><span class="rating">★ 4.7</span><span>1.0 km</span></div></div><a class="hotel-call" href="tel:+998902989565" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
+        <div class="hotel-card" onclick="openHotelMap(39.782126,64.4333559)"><div class="hotel-info"><h4>Garden Plaza Bukhara</h4><div class="hotel-meta"><span class="rating">★ 4.3</span><span>1.3 km</span></div></div></div>
+        <div class="hotel-card" onclick="openHotelMap(39.7754226,64.4360799)"><div class="hotel-info"><h4>Khan Rooms</h4><div class="hotel-meta"><span class="rating">★ 4.1</span><span>1.4 km</span></div></div><a class="hotel-call" href="tel:+998914005979" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
+        <div class="hotel-card" onclick="openHotelMap(39.7822192,64.4255769)"><div class="hotel-info"><h4>Zara Family Guest House</h4><div class="hotel-meta"><span class="rating">★ 5.0</span><span>1.9 km</span></div></div><a class="hotel-call" href="tel:+998906370805" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
+        <div class="hotel-card" onclick="openHotelMap(39.7741014,64.424721)"><div class="hotel-info"><h4>Everland Bukhara Hotel</h4><div class="hotel-meta"><span class="rating">★ 4.9</span><span>2.3 km</span></div></div><a class="hotel-call" href="tel:+998886000008" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a></div>
+      </div>
+      <p class="hotel-note" data-i18n="hotelNote">Narxlar mavsum va xonalar bandligiga qarab o'zgaradi — aniq narxni telefon orqali so'rashingiz mumkin.</p>
+    </section>
+    <footer><p>© Estet Clinic — Estetik va plastik jarrohlik markazi</p></footer>
+  </div>
+</div>
+
+<!-- ================= TAB BAR ================= -->
+<nav class="tabbar">
+  <button class="tab-btn is-active" data-tab="home" onclick="switchTab('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/></svg>
+    <span data-i18n="tabHome">Bosh sahifa</span>
+  </button>
+  <button class="tab-btn" data-tab="booking" onclick="switchTab('booking')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    <span data-i18n="tabBooking">Bron</span>
+  </button>
+  <button class="tab-btn" data-tab="ai" onclick="switchTab('ai')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg>
+    <span data-i18n="tabAI">AI Yordamchi</span>
+  </button>
+  <button class="tab-btn" data-tab="register" onclick="switchTab('register')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11v6M19 14h6"/></svg>
+    <span data-i18n="tabRegister">Ro'yxat</span>
+  </button>
+  <button class="tab-btn" data-tab="jobs" onclick="switchTab('jobs')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+    <span data-i18n="tabJobs">Vakansiya</span>
+  </button>
+  <button class="tab-btn" data-tab="location" onclick="switchTab('location')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+    <span data-i18n="tabLocation">Manzil</span>
+  </button>
+</nav>
+
+<!-- ================= TIL TANLASH MODAL ================= -->
+<div class="lang-modal-overlay" id="langModalOverlay" onclick="closeLangModalOutside(event)">
+  <div class="lang-modal">
+    <div class="lang-modal-handle"></div>
+    <div class="lang-modal-title">Tilni tanlang / Choose language</div>
+    <div class="lang-option" data-lang="uz" onclick="chooseLang('uz')"><span class="flag">🇺🇿</span> O'zbek</div>
+    <div class="lang-option" data-lang="ru" onclick="chooseLang('ru')"><span class="flag">🇷🇺</span> Русский</div>
+    <div class="lang-option" data-lang="tr" onclick="chooseLang('tr')"><span class="flag">🇹🇷</span> Türkçe</div>
+    <div class="lang-option" data-lang="tg" onclick="chooseLang('tg')"><span class="flag">🇹🇯</span> Тоҷикӣ</div>
+  </div>
+</div>
+
+<!-- ================= ADMIN LOGIN MODAL ================= -->
+<div class="lang-modal-overlay" id="adminModalOverlay" onclick="closeAdminModalOutside(event)">
+  <div class="lang-modal">
+    <div class="lang-modal-handle"></div>
+    <div class="lang-modal-title">🔐 Admin kirish</div>
+    <input type="password" id="adminPasswordInput" class="book-input" placeholder="Parolni kiriting" onkeydown="if(event.key==='Enter')submitAdminLogin();" style="margin-bottom:14px;">
+    <button class="btn btn-primary" onclick="submitAdminLogin()">Kirish</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+  // ======== SOZLAMA: backend API manzili (deploy qilingach shu yerga qo'ying) ========
+  const API_BASE = "https://SIZNING-RENDER-MANZILINGIZ.onrender.com";
+
+  // ---------- Telegram Mini App bootstrap ----------
+  const tg = window.Telegram ? window.Telegram.WebApp : null;
+  if (tg) {
+    tg.ready(); tg.expand();
+    try { tg.setHeaderColor('#ffffff'); tg.setBackgroundColor('#ffffff'); } catch(e){}
+  }
+
+  // ======== TIL TIZIMI (i18n) ========
+  const LANG_LABELS = {uz:'UZ', ru:'RU', tr:'TR', tg:'TJ'};
+
+  const TRANSLATIONS = {
+    uz: {
+      heroEyebrow:"Estetik va plastik jarrohlik markazi",
+      heroTitle:"Sochingizni <em>qaytadan</em><br>tabiiy tarzda tiklang",
+      heroSub:"Zamonaviy graft texnologiyasi, umrlik kafolat sertifikati va bepul konsultatsiya — Estet Clinic bilan ishonchli natija.",
+      heroBtnAI:"AI yordamchi bilan gaplashish", heroBtnPackages:"Paketlarni ko'rish",
+      statPriceLabel:"dan boshlanadi", statYearNumber:"1 yil", statYearLabel:"bepul konsultatsiya", statWarrantyLabel:"umrlik kafolat",
+      trust1:"Umrlik kafolat", trust2:"Malakali jarrohlar", trust3:"Og'riqsiz jarayon", trust4:"24 soat ochiq",
+      calcEyebrow:"Kalkulyator", calcTitle:"Taxminiy paketingizni bilib oling", calcDesc:"2 ta savolga javob bering — sizga mos paketni taxminiy aniqlaymiz.",
+      calcQ1:"Qaysi qismda sochsizlik bor?", calcAreaForehead:"Peshona chizig'i", calcAreaCrown:"Tepa qism", calcAreaFull:"Umumiy, keng maydon",
+      calcQ2:"Qanchalik jiddiy?", calcSevSmall:"Kichik", calcSevMedium:"O'rta", calcSevLarge:"Katta",
+      calcResultLabel:"Tavsiya etilgan paket", calcCta:"AI yordamchidan batafsil so'rash", calcRestart:"Qaytadan hisoblash",
+      pkgEyebrow:"Paketlar", pkgTitle:"Sizga mos rejani tanlang", pkgDesc:"Aniq graft soni bepul konsultatsiyada shifokor tomonidan belgilanadi.",
+      featureHotel:"1 kunlik bepul mehmonxona", featurePlasma2:"2 seans plazmoterapiya", featurePlasma3:"3 seans plazmoterapiya",
+      featureLab:"Laboratoriya analizlari", featureConsult:"1 yillik bepul konsultatsiya", featureWarranty:"Umrlik kafolat sertifikati",
+      pkgCta:"Shu paket haqida so'rash", badgeOptimal:"Optimal",
+      stepsEyebrow:"Jarayon", stepsTitle:"4 bosqichda yangi soch",
+      step1Title:"Bepul konsultatsiya", step1Desc:"Shifokor holatingizni ko'rib chiqadi va aniq graft sonini belgilaydi.",
+      step2Title:"Reja va sana", step2Desc:"Sizga mos paket va operatsiya sanasi kelishiladi.",
+      step3Title:"Operatsiya", step3Desc:"Zamonaviy usulda, og'riqsiz va bir kunlik jarayon.",
+      step4Title:"Kuzatuv va natija", step4Desc:"1 yil davomida bepul konsultatsiya va umrlik kafolat.",
+      contactTitle:"Bepul konsultatsiyaga yoziling", contactDesc:"Mutaxassisimiz siz bilan bog'lanib, barcha savollaringizga javob beradi.", contactBookBtn:"Bron qilish",
+      tabHome:"Bosh sahifa", tabBooking:"Bron", tabAI:"AI Yordamchi", tabRegister:"Ro'yxat", tabJobs:"Vakansiya", tabLocation:"Manzil",
+      aiHeaderTitle:"🤖 AI Yordamchi", aiHeaderDesc:"Savolingizni yozing — soch ekish bo'yicha maslahat beraman",
+      aiInitMsg:"Assalomu alaykum! 🌿 Men Estet Clinic'ning AI yordamchisiman. Soch ekish bo'yicha savollaringizga javob beraman. Sizga qanday yordam bera olaman?",
+      chipPrices:"💰 Narxlar", chipConsult:"📅 Konsultatsiya", chipPain:"💉 Og'riqli bo'ladimi?", chipHandoff:"👤 Odam bilan gaplashish",
+      referralTitle:"Do'stingizni taklif qiling", referralDesc:"Do'stingiz sizning havolangiz orqali kelsa, ikkalangiz ham chegirmaga ega bo'lasiz.", referralBtn:"Ulashish",
+      referralShareText:"Estet Clinic - soch ekish markazi. Bepul konsultatsiya uchun shu havola orqali kiring!", referralNeedTelegram:"Bu funksiya faqat Telegram ilovasi ichida ishlaydi.",
+      handoffSent:"✅ So'rovingiz operatorga yuborildi. Tez orada siz bilan bog'lanishadi.",
+      quickPricesMsg:"Narxlar qanday?", quickConsultMsg:"Bepul konsultatsiyaga yozilmoqchiman", quickPainMsg:"Operatsiya og'riqli bo'ladimi?",
+      chatPlaceholder:"Xabar yozing...", chatErrorGeneric:"Kechirasiz, xatolik yuz berdi. Qaytadan urinib ko'ring.",
+      chatErrorNetwork:"Internet aloqasi bilan muammo. Iltimos qaytadan urinib ko'ring yoki +998 97 308-09-99 raqamiga qo'ng'iroq qiling.",
+      askPackageTemplate:"{name} paketi haqida batafsil aytib bering",
+      jobsTitle:"Vakansiyalar tez kunda", jobsDesc:"Hozircha ochiq ish o'rinlari yo'q. Yangi vakansiyalar shu yerda e'lon qilinadi — kuzatib boring!",
+      locEyebrow:"Manzil", locTitle:"Buxoro, Oqmasjid ko'chasi 8/5", locDesc:"Klinika 24 soat ochiq. Boshqa shahardan kelayotgan mijozlar uchun yaqin mehmonxonalar ro'yxati quyida.",
+      locOpenRoute:"Yo'l xaritasini ochish", hotelsEyebrow:"Yaqin mehmonxonalar", hotelsTitle:"Klinikaga yaqin turar joylar",
+      hotelNote:"Narxlar mavsum va xonalar bandligiga qarab o'zgaradi — aniq narxni telefon orqali so'rashingiz mumkin.",
+      bookEyebrow:"Bron qilish", bookTitle:"Bepul konsultatsiyaga yoziling", bookDesc:"Kun va vaqtni tanlang — operatorimiz tasdiqlash uchun siz bilan bog'lanadi.",
+      slotLabel:"Vaqtni tanlang", bookSummaryLabel:"Tanlangan vaqt", bookNamePlaceholder:"Ismingiz", bookPhonePlaceholder:"Telefon raqamingiz (+998...)",
+      bookSubmitBtn:"Bron qilish", bookSuccessTitle:"Bron qabul qilindi!", bookSuccessDesc:"Operatorimiz tez orada siz bilan bog'lanib, vaqtni tasdiqlaydi.",
+      bookFillFields:"Iltimos, ism va telefon raqamingizni kiriting.", bookGenericError:"Xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.",
+      bookNetworkError:"Internet aloqasi bilan muammo. +998 97 308-09-99 raqamiga qo'ng'iroq qiling.",
+      todayLabel:"Bugun", tomorrowLabel:"Ertaga",
+      days:["Yak","Dush","Sesh","Chor","Pay","Jum","Shan"], months:["yan","fev","mar","apr","may","iyun","iyul","avg","sen","okt","noy","dek"],
+    },
+    ru: {
+      heroEyebrow:"Центр эстетической и пластической хирургии",
+      heroTitle:"Верните волосам <em>естественный</em><br>вид заново",
+      heroSub:"Современная технология графтинга, сертификат пожизненной гарантии и бесплатная консультация — надёжный результат с Estet Clinic.",
+      heroBtnAI:"Написать AI-помощнику", heroBtnPackages:"Смотреть пакеты",
+      statPriceLabel:"от такой цены", statYearNumber:"1 год", statYearLabel:"бесплатная консультация", statWarrantyLabel:"пожизненная гарантия",
+      trust1:"Пожизненная гарантия", trust2:"Опытные хирурги", trust3:"Безболезненная процедура", trust4:"Открыто 24 часа",
+      calcEyebrow:"Калькулятор", calcTitle:"Узнайте свой примерный пакет", calcDesc:"Ответьте на 2 вопроса — мы примерно определим подходящий пакет.",
+      calcQ1:"В какой области выпадение волос?", calcAreaForehead:"Линия лба", calcAreaCrown:"Теменная зона", calcAreaFull:"Обширная область",
+      calcQ2:"Насколько выражено?", calcSevSmall:"Небольшое", calcSevMedium:"Среднее", calcSevLarge:"Сильное",
+      calcResultLabel:"Рекомендуемый пакет", calcCta:"Спросить подробнее у AI-помощника", calcRestart:"Рассчитать заново",
+      pkgEyebrow:"Пакеты", pkgTitle:"Выберите подходящий план", pkgDesc:"Точное количество графтов определяет врач на бесплатной консультации.",
+      featureHotel:"1 ночь бесплатного проживания", featurePlasma2:"2 сеанса плазмотерапии", featurePlasma3:"3 сеанса плазмотерапии",
+      featureLab:"Лабораторные анализы", featureConsult:"1 год бесплатных консультаций", featureWarranty:"Сертификат пожизненной гарантии",
+      pkgCta:"Спросить об этом пакете", badgeOptimal:"Оптимально",
+      stepsEyebrow:"Процесс", stepsTitle:"Новые волосы за 4 шага",
+      step1Title:"Бесплатная консультация", step1Desc:"Врач осмотрит вас и определит точное количество графтов.",
+      step2Title:"План и дата", step2Desc:"Согласовываются подходящий пакет и дата операции.",
+      step3Title:"Операция", step3Desc:"Современным методом, безболезненно, в течение одного дня.",
+      step4Title:"Наблюдение и результат", step4Desc:"Год бесплатных консультаций и пожизненная гарантия.",
+      contactTitle:"Запишитесь на бесплатную консультацию", contactDesc:"Наш специалист свяжется с вами и ответит на все вопросы.", contactBookBtn:"Записаться",
+      tabHome:"Главная", tabBooking:"Запись", tabAI:"AI-помощник", tabRegister:"Регистрация", tabJobs:"Вакансии", tabLocation:"Адрес",
+      aiHeaderTitle:"🤖 AI-помощник", aiHeaderDesc:"Напишите ваш вопрос — я проконсультирую по пересадке волос",
+      aiInitMsg:"Здравствуйте! 🌿 Я AI-помощник Estet Clinic. Отвечу на ваши вопросы о пересадке волос. Чем могу помочь?",
+      chipPrices:"💰 Цены", chipConsult:"📅 Консультация", chipPain:"💉 Будет больно?", chipHandoff:"👤 Поговорить с человеком",
+      referralTitle:"Пригласите друга", referralDesc:"Если друг придёт по вашей ссылке, вы оба получите скидку.", referralBtn:"Поделиться",
+      referralShareText:"Estet Clinic - центр пересадки волос. Перейдите по этой ссылке для бесплатной консультации!", referralNeedTelegram:"Эта функция работает только внутри приложения Telegram.",
+      handoffSent:"✅ Ваш запрос отправлен оператору. Скоро с вами свяжутся.",
+      quickPricesMsg:"Какие у вас цены?", quickConsultMsg:"Хочу записаться на бесплатную консультацию", quickPainMsg:"Операция будет болезненной?",
+      chatPlaceholder:"Напишите сообщение...", chatErrorGeneric:"Извините, произошла ошибка. Попробуйте ещё раз.",
+      chatErrorNetwork:"Проблема с подключением к интернету. Попробуйте ещё раз или позвоните по номеру +998 97 308-09-99.",
+      askPackageTemplate:"Расскажите подробнее о пакете {name}",
+      jobsTitle:"Вакансии скоро", jobsDesc:"Сейчас открытых вакансий нет. Новые объявления появятся здесь — следите за обновлениями!",
+      locEyebrow:"Адрес", locTitle:"Бухара, улица Окмасжид 8/5", locDesc:"Клиника открыта 24 часа. Список ближайших отелей для гостей из других городов — ниже.",
+      locOpenRoute:"Открыть маршрут", hotelsEyebrow:"Ближайшие отели", hotelsTitle:"Места проживания рядом с клиникой",
+      hotelNote:"Цены меняются в зависимости от сезона и загруженности — точную цену уточняйте по телефону.",
+      bookEyebrow:"Запись", bookTitle:"Запишитесь на бесплатную консультацию", bookDesc:"Выберите день и время — оператор свяжется с вами для подтверждения.",
+      slotLabel:"Выберите время", bookSummaryLabel:"Выбранное время", bookNamePlaceholder:"Ваше имя", bookPhonePlaceholder:"Ваш номер телефона (+998...)",
+      bookSubmitBtn:"Записаться", bookSuccessTitle:"Запись принята!", bookSuccessDesc:"Наш оператор скоро свяжется с вами для подтверждения времени.",
+      bookFillFields:"Пожалуйста, введите имя и номер телефона.", bookGenericError:"Произошла ошибка. Попробуйте ещё раз.",
+      bookNetworkError:"Проблема с интернет-соединением. Позвоните по номеру +998 97 308-09-99.",
+      todayLabel:"Сегодня", tomorrowLabel:"Завтра",
+      days:["Вс","Пн","Вт","Ср","Чт","Пт","Сб"], months:["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"],
+    },
+    tr: {
+      heroEyebrow:"Estetik ve Plastik Cerrahi Merkezi",
+      heroTitle:"Saçlarınıza <em>yeniden</em><br>doğal bir görünüm kazandırın",
+      heroSub:"Modern greft teknolojisi, ömür boyu garanti sertifikası ve ücretsiz konsültasyon — Estet Clinic ile güvenilir sonuç.",
+      heroBtnAI:"AI asistanla konuş", heroBtnPackages:"Paketleri görüntüle",
+      statPriceLabel:"başlangıç fiyatı", statYearNumber:"1 yıl", statYearLabel:"ücretsiz konsültasyon", statWarrantyLabel:"ömür boyu garanti",
+      trust1:"Ömür boyu garanti", trust2:"Uzman cerrahlar", trust3:"Ağrısız işlem", trust4:"7/24 açık",
+      calcEyebrow:"Hesaplayıcı", calcTitle:"Yaklaşık paketinizi öğrenin", calcDesc:"2 soruyu yanıtlayın — size uygun paketi yaklaşık olarak belirleyelim.",
+      calcQ1:"Saç dökülmesi hangi bölgede?", calcAreaForehead:"Alın çizgisi", calcAreaCrown:"Tepe bölgesi", calcAreaFull:"Geniş, genel alan",
+      calcQ2:"Ne kadar belirgin?", calcSevSmall:"Az", calcSevMedium:"Orta", calcSevLarge:"Fazla",
+      calcResultLabel:"Önerilen paket", calcCta:"AI asistandan detaylı bilgi al", calcRestart:"Yeniden hesapla",
+      pkgEyebrow:"Paketler", pkgTitle:"Size uygun planı seçin", pkgDesc:"Kesin greft sayısı ücretsiz konsültasyonda doktor tarafından belirlenir.",
+      featureHotel:"1 gecelik ücretsiz konaklama", featurePlasma2:"2 seans plazma tedavisi", featurePlasma3:"3 seans plazma tedavisi",
+      featureLab:"Laboratuvar tahlilleri", featureConsult:"1 yıl ücretsiz konsültasyon", featureWarranty:"Ömür boyu garanti sertifikası",
+      pkgCta:"Bu paket hakkında sor", badgeOptimal:"Optimal",
+      stepsEyebrow:"Süreç", stepsTitle:"4 adımda yeni saçlar",
+      step1Title:"Ücretsiz konsültasyon", step1Desc:"Doktor durumunuzu inceler ve kesin greft sayısını belirler.",
+      step2Title:"Plan ve tarih", step2Desc:"Size uygun paket ve operasyon tarihi belirlenir.",
+      step3Title:"Operasyon", step3Desc:"Modern yöntemle, ağrısız ve tek günlük işlem.",
+      step4Title:"Takip ve sonuç", step4Desc:"1 yıl boyunca ücretsiz konsültasyon ve ömür boyu garanti.",
+      contactTitle:"Ücretsiz konsültasyona kaydolun", contactDesc:"Uzmanımız sizinle iletişime geçip tüm sorularınızı yanıtlayacak.", contactBookBtn:"Randevu al",
+      tabHome:"Ana Sayfa", tabBooking:"Randevu", tabAI:"AI Asistan", tabRegister:"Kayıt", tabJobs:"Kariyer", tabLocation:"Konum",
+      aiHeaderTitle:"🤖 AI Asistan", aiHeaderDesc:"Sorunuzu yazın — saç ekimi hakkında tavsiye vereceğim",
+      aiInitMsg:"Merhaba! 🌿 Ben Estet Clinic'in AI asistanıyım. Saç ekimi ile ilgili sorularınızı yanıtlarım. Size nasıl yardımcı olabilirim?",
+      chipPrices:"💰 Fiyatlar", chipConsult:"📅 Konsültasyon", chipPain:"💉 Ağrılı mı olur?", chipHandoff:"👤 Bir yetkiliyle konuş",
+      referralTitle:"Arkadaşınızı davet edin", referralDesc:"Arkadaşınız sizin linkinizle gelirse, ikiniz de indirim kazanırsınız.", referralBtn:"Paylaş",
+      referralShareText:"Estet Clinic - saç ekim merkezi. Ücretsiz konsültasyon için bu bağlantıya tıklayın!", referralNeedTelegram:"Bu özellik yalnızca Telegram uygulaması içinde çalışır.",
+      handoffSent:"✅ Talebiniz operatöre iletildi. Kısa süre içinde sizinle iletişime geçilecek.",
+      quickPricesMsg:"Fiyatlar nasıl?", quickConsultMsg:"Ücretsiz konsültasyona kaydolmak istiyorum", quickPainMsg:"Operasyon ağrılı mı olur?",
+      chatPlaceholder:"Mesaj yazın...", chatErrorGeneric:"Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.",
+      chatErrorNetwork:"İnternet bağlantısında sorun var. Lütfen tekrar deneyin ya da +998 97 308-09-99 numarasını arayın.",
+      askPackageTemplate:"{name} paketi hakkında detaylı bilgi verin",
+      jobsTitle:"Kariyer fırsatları yakında", jobsDesc:"Şu anda açık pozisyon yok. Yeni ilanlar burada paylaşılacak — takipte kalın!",
+      locEyebrow:"Konum", locTitle:"Buhara, Okmasjid Caddesi 8/5", locDesc:"Klinik 7/24 açıktır. Başka şehirden gelen misafirler için yakın oteller aşağıda listelenmiştir.",
+      locOpenRoute:"Yol tarifini aç", hotelsEyebrow:"Yakın Oteller", hotelsTitle:"Kliniğe yakın konaklama yerleri",
+      hotelNote:"Fiyatlar sezona ve doluluğa göre değişir — kesin fiyatı telefonla sorabilirsiniz.",
+      bookEyebrow:"Randevu", bookTitle:"Ücretsiz konsültasyona kaydolun", bookDesc:"Gün ve saati seçin — operatörümüz onay için sizinle iletişime geçecek.",
+      slotLabel:"Saati seçin", bookSummaryLabel:"Seçilen zaman", bookNamePlaceholder:"Adınız", bookPhonePlaceholder:"Telefon numaranız (+998...)",
+      bookSubmitBtn:"Randevu al", bookSuccessTitle:"Randevu alındı!", bookSuccessDesc:"Operatörümüz kısa süre içinde sizinle iletişime geçip saati onaylayacak.",
+      bookFillFields:"Lütfen adınızı ve telefon numaranızı girin.", bookGenericError:"Bir hata oluştu. Lütfen tekrar deneyin.",
+      bookNetworkError:"İnternet bağlantı sorunu. +998 97 308-09-99 numarasını arayın.",
+      todayLabel:"Bugün", tomorrowLabel:"Yarın",
+      days:["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"], months:["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"],
+    },
+    tg: {
+      heroEyebrow:"Маркази ҷарроҳии зебоишиносӣ ва пластикӣ",
+      heroTitle:"Мӯйтонро <em>дубора</em><br>ба таври табиӣ барқарор кунед",
+      heroSub:"Технологияи муосири графт, сертификати кафолати умрбод ва машварати ройгон — бо Estet Clinic натиҷаи боэътимод.",
+      heroBtnAI:"Бо ёрдамчии AI сӯҳбат кунед", heroBtnPackages:"Пакетҳоро дидан",
+      statPriceLabel:"аз ин арзиш сар мешавад", statYearNumber:"1 сол", statYearLabel:"машварати ройгон", statWarrantyLabel:"кафолати умрбод",
+      trust1:"Кафолати умрбод", trust2:"Ҷарроҳони ботаҷриба", trust3:"Раванди бедард", trust4:"24 соат кушода",
+      calcEyebrow:"Ҳисобкунак", calcTitle:"Пакети тахминии худро донед", calcDesc:"Ба 2 савол ҷавоб диҳед — пакети мувофиқро тахминан муайян мекунем.",
+      calcQ1:"Дар кадом қисм мӯйрезӣ ҳаст?", calcAreaForehead:"Хатти пешона", calcAreaCrown:"Қисми боло", calcAreaFull:"Масоҳати васеъ",
+      calcQ2:"То чӣ андоза ҷиддист?", calcSevSmall:"Хурд", calcSevMedium:"Миёна", calcSevLarge:"Калон",
+      calcResultLabel:"Пакети тавсияшуда", calcCta:"Аз ёрдамчии AI муфассал пурсидан", calcRestart:"Аз нав ҳисоб кардан",
+      pkgEyebrow:"Пакетҳо", pkgTitle:"Нақшаи мувофиқро интихоб кунед", pkgDesc:"Шумораи дақиқи графт дар машварати ройгон аз ҷониби духтур муайян карда мешавад.",
+      featureHotel:"1 шабонарӯз меҳмонхонаи ройгон", featurePlasma2:"2 сеанси плазмотерапия", featurePlasma3:"3 сеанси плазмотерапия",
+      featureLab:"Таҳлилҳои лабораторӣ", featureConsult:"1 соли машварати ройгон", featureWarranty:"Сертификати кафолати умрбод",
+      pkgCta:"Дар бораи ин пакет пурсидан", badgeOptimal:"Мувофиқтарин",
+      stepsEyebrow:"Раванд", stepsTitle:"Дар 4 марҳала мӯйи нав",
+      step1Title:"Машварати ройгон", step1Desc:"Духтур ҳолати шуморо баррасӣ карда, шумораи дақиқи графтро муайян мекунад.",
+      step2Title:"Нақша ва сана", step2Desc:"Пакет ва санаи амалиёти мувофиқ ба шумо мувофиқа карда мешавад.",
+      step3Title:"Амалиёт", step3Desc:"Бо усули муосир, бедард ва дар як рӯз.",
+      step4Title:"Назорат ва натиҷа", step4Desc:"Дар давоми 1 сол машварати ройгон ва кафолати умрбод.",
+      contactTitle:"Ба машварати ройгон навишта шавед", contactDesc:"Мутахассиси мо бо шумо тамос гирифта, ба ҳамаи саволҳоятон ҷавоб медиҳад.", contactBookBtn:"Бронь кардан",
+      tabHome:"Саҳифаи асосӣ", tabBooking:"Бронь", tabAI:"Ёрдамчии AI", tabRegister:"Рӯйхат", tabJobs:"Ҷои кор", tabLocation:"Суроға",
+      aiHeaderTitle:"🤖 Ёрдамчии AI", aiHeaderDesc:"Саволатонро нависед — оид ба шинондани мӯй маслиҳат медиҳам",
+      aiInitMsg:"Ассалому алайкум! 🌿 Ман ёрдамчии AI-и Estet Clinic ҳастам. Ба саволҳои шумо оид ба шинондани мӯй ҷавоб медиҳам. Чӣ гуна ба шумо кӯмак карда метавонам?",
+      chipPrices:"💰 Нархҳо", chipConsult:"📅 Машварат", chipPain:"💉 Дардовар мешавад?", chipHandoff:"👤 Бо оператор гап задан",
+      referralTitle:"Дӯстатонро таклиф кунед", referralDesc:"Агар дӯстатон тавассути истиноди шумо ояд, ҳар дуятон тахфиф мегиред.", referralBtn:"Мубодила кардан",
+      referralShareText:"Estet Clinic - маркази шинондани мӯй. Барои машварати ройгон тавассути ин истинод ворид шавед!", referralNeedTelegram:"Ин функсия танҳо дар дохили барномаи Telegram кор мекунад.",
+      handoffSent:"✅ Дархости шумо ба оператор фиристода шуд. Ба зудӣ бо шумо тамос мегиранд.",
+      quickPricesMsg:"Нархҳо чӣ гунаанд?", quickConsultMsg:"Мехоҳам ба машварати ройгон навишта шавам", quickPainMsg:"Оё амалиёт дардовар мешавад?",
+      chatPlaceholder:"Паём нависед...", chatErrorGeneric:"Мебахшед, хатогӣ рух дод. Аз нав кӯшиш кунед.",
+      chatErrorNetwork:"Мушкилот бо пайвасти интернет. Лутфан аз нав кӯшиш кунед ё ба рақами +998 97 308-09-99 занг занед.",
+      askPackageTemplate:"Дар бораи пакети {name} муфассал нақл кунед",
+      jobsTitle:"Ҷойҳои кор ба наздикӣ", jobsDesc:"Ҳозир ҷои кори холӣ нест. Эълонҳои нав дар ин ҷо гузошта мешаванд — пайгирӣ кунед!",
+      locEyebrow:"Суроға", locTitle:"Бухоро, кӯчаи Оқмасҷид 8/5", locDesc:"Клиника 24 соат кушода аст. Барои меҳмонони аз шаҳрҳои дигар омада рӯйхати меҳмонхонаҳои наздик дар поён оварда шудааст.",
+      locOpenRoute:"Кушодани масир", hotelsEyebrow:"Меҳмонхонаҳои наздик", hotelsTitle:"Ҷойҳои истиқомат дар наздикии клиника",
+      hotelNote:"Нархҳо вобаста ба мавсим ва бандии утоқҳо тағйир меёбанд — нархи дақиқро тавассути телефон пурсида метавонед.",
+      bookEyebrow:"Бронь кардан", bookTitle:"Ба машварати ройгон навишта шавед", bookDesc:"Рӯз ва вақтро интихоб кунед — оператори мо барои тасдиқ бо шумо тамос мегирад.",
+      slotLabel:"Вақтро интихоб кунед", bookSummaryLabel:"Вақти интихобшуда", bookNamePlaceholder:"Номи шумо", bookPhonePlaceholder:"Рақами телефони шумо (+998...)",
+      bookSubmitBtn:"Бронь кардан", bookSuccessTitle:"Бронь қабул карда шуд!", bookSuccessDesc:"Оператори мо ба наздикӣ бо шумо тамос гирифта, вақтро тасдиқ мекунад.",
+      bookFillFields:"Лутфан, ном ва рақами телефони худро ворид кунед.", bookGenericError:"Хатогӣ рух дод. Лутфан аз нав кӯшиш кунед.",
+      bookNetworkError:"Мушкилот бо пайвасти интернет. Ба рақами +998 97 308-09-99 занг занед.",
+      todayLabel:"Имрӯз", tomorrowLabel:"Пагоҳ",
+      days:["Яшб","Дшб","Сшб","Чшб","Пшб","Ҷум","Шнб"], months:["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"],
+    },
+  };
+
+  let currentLang = localStorage.getItem('estet_lang') || 'uz';
+
+  function T(key){
+    return (TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][key]) || (TRANSLATIONS.uz[key] || '');
+  }
+
+  function applyLanguage(lang){
+    if (!TRANSLATIONS[lang]) return;
+    currentLang = lang;
+    localStorage.setItem('estet_lang', lang);
+    document.querySelectorAll('.nav-lang').forEach(el => el.textContent = LANG_LABELS[lang]);
+    document.querySelectorAll('[data-i18n]').forEach(el=>{
+      const key = el.dataset.i18n;
+      if (TRANSLATIONS[lang][key] !== undefined) el.textContent = TRANSLATIONS[lang][key];
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(el=>{
+      const key = el.dataset.i18nHtml;
+      if (TRANSLATIONS[lang][key] !== undefined) el.innerHTML = TRANSLATIONS[lang][key];
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+      const key = el.dataset.i18nPlaceholder;
+      if (TRANSLATIONS[lang][key] !== undefined) el.placeholder = TRANSLATIONS[lang][key];
+    });
+    document.querySelectorAll('.lang-option').forEach(el=>{
+      el.classList.toggle('is-selected', el.dataset.lang === lang);
+    });
+    // Bron kunlarini qayta chizish (til bo'yicha kun/oy nomlari)
+    selectedDayLabel = null; selectedTime = null;
+    const daySelectorEl = document.getElementById('daySelector');
+    if (daySelectorEl) daySelectorEl.innerHTML = '';
+    const slotGridEl = document.getElementById('slotGrid');
+    if (slotGridEl){ slotGridEl.innerHTML = ''; slotGridEl.style.display = 'none'; }
+    const bookingFormEl = document.getElementById('bookingForm');
+    if (bookingFormEl) bookingFormEl.style.display = 'none';
+    buildDaySelector();
+  }
+
+  function openLangModal(){ document.getElementById('langModalOverlay').classList.add('is-open'); }
+  function closeLangModalOutside(e){ if (e.target.id === 'langModalOverlay') e.target.classList.remove('is-open'); }
+  function chooseLang(code){ applyLanguage(code); document.getElementById('langModalOverlay').classList.remove('is-open'); }
+
+  function detectInitialLang(){
+    const saved = localStorage.getItem('estet_lang');
+    if (saved && TRANSLATIONS[saved]) return saved;
+    const tgLang = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.language_code : null;
+    if (tgLang && TRANSLATIONS[tgLang]) return tgLang;
+    return 'uz';
+  }
+
+  // ---------- MEHMONXONA -> XARITA ----------
+  function openHotelMap(lat, lng){
+    const url = `https://www.google.com/maps?q=${lat},${lng}`;
+    if (tg && tg.openLink) { tg.openLink(url); } else { window.open(url, '_blank'); }
+  }
+
+  // ---------- NARX KALKULYATORI ----------
+  const CALC_MAP = {
+    "forehead_small":"Minimum", "forehead_medium":"Minimum", "forehead_large":"Medium",
+    "crown_small":"Medium", "crown_medium":"Medium", "crown_large":"Maximum",
+    "full_small":"Maximum", "full_medium":"Maximum", "full_large":"Maximum+",
+  };
+  const PACKAGE_INFO = {
+    "Minimum":{price:"700$", grafts:"2.000–2.500"},
+    "Medium":{price:"900$", grafts:"2.600–3.500"},
+    "Maximum":{price:"1100$", grafts:"3.600–4.500"},
+    "Maximum+":{price:"1300$", grafts:"4.600–6.000"},
+  };
+  let calcArea = null, calcSeverity = null;
+
+  function calcSelectArea(area, el){
+    calcArea = area;
+    document.querySelectorAll('#calcStep1 .calc-opt').forEach(o=>o.classList.remove('is-active'));
+    el.classList.add('is-active');
+    document.getElementById('calcStep2').style.display = 'block';
+  }
+
+  function calcSelectSeverity(sev, el){
+    calcSeverity = sev;
+    document.querySelectorAll('#calcStep2 .calc-opt').forEach(o=>o.classList.remove('is-active'));
+    el.classList.add('is-active');
+    const pkg = CALC_MAP[`${calcArea}_${calcSeverity}`];
+    if (!pkg) return;
+    const info = PACKAGE_INFO[pkg];
+    document.getElementById('calcResultName').textContent = pkg;
+    document.getElementById('calcResultPrice').textContent = `${info.price} (${info.grafts} graft)`;
+    document.getElementById('calcResult').style.display = 'block';
+    trackPackageInterest(pkg);
+  }
+
+  function calcGoToAI(){
+    askAboutPackage(document.getElementById('calcResultName').textContent);
+  }
+
+  function calcReset(){
+    calcArea = null; calcSeverity = null;
+    document.querySelectorAll('.calc-opt').forEach(o=>o.classList.remove('is-active'));
+    document.getElementById('calcStep2').style.display = 'none';
+    document.getElementById('calcResult').style.display = 'none';
+  }
+
+  function backendConfigured(){
+    return !!API_BASE && API_BASE.indexOf('SIZNING-RENDER') === -1;
+  }
+
+  // ---------- REFERRAL (DO'STNI TAKLIF QILISH) ----------
+  const BOT_USERNAME = "estetklinikbot";
+
+  function shareReferral(){
+    const uid = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : null;
+    if (!uid){
+      alert(T('referralNeedTelegram'));
+      return;
+    }
+    const link = `https://t.me/${BOT_USERNAME}?start=ref_${uid}`;
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(T('referralShareText'))}`;
+    if (tg && tg.openLink) { tg.openLink(shareUrl); } else { window.open(shareUrl, '_blank'); }
+  }
+
+  // ---------- OPERATOR BILAN BOG'LANISH (HANDOFF) ----------
+  function requestHandoff(){
+    if (!backendConfigured()){
+      addBubble("⚠️ Dasturchi uchun: API_BASE hali sozlanmagan.", 'bot');
+      return;
+    }
+    const uid = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : null;
+    const uname = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.username : "";
+    const lastMsg = chatHistory.length ? chatHistory[chatHistory.length - 1].content : "";
+    addBubble(T('chipHandoff'), 'user');
+    fetch(API_BASE + '/api/handoff', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ user_id: uid, username: uname, last_message: lastMsg })
+    })
+      .then(()=> addBubble(T('handoffSent'), 'bot'))
+      .catch(()=> addBubble(T('chatErrorNetwork'), 'bot'));
+  }
+
+  // ======== ADMIN PANEL (parol bilan) ========
+  let adminPassword = sessionStorage.getItem('estet_admin_pw') || null;
+  let isAdminAuthed = false;
+
+  function openAdminModal(){ document.getElementById('adminModalOverlay').classList.add('is-open'); }
+  function closeAdminModalOutside(e){ if (e.target.id === 'adminModalOverlay') e.target.classList.remove('is-open'); }
+
+  function showAdminTab(){
+    const regBtn = document.querySelector('.tab-btn[data-tab="register"]');
+    if (regBtn) regBtn.style.display = '';
+  }
+
+  async function submitAdminLogin(){
+    const input = document.getElementById('adminPasswordInput');
+    const pw = input.value;
+    if (!pw) return;
+    if (!backendConfigured()){
+      alert("Dasturchi uchun: API_BASE hali sozlanmagan.");
+      return;
+    }
+    try {
+      const res = await fetch(API_BASE + '/api/admin-login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ password: pw })
+      });
+      const data = await res.json();
+      if (data.success){
+        adminPassword = pw;
+        isAdminAuthed = true;
+        sessionStorage.setItem('estet_admin_pw', pw);
+        input.value = '';
+        document.getElementById('adminModalOverlay').classList.remove('is-open');
+        showAdminTab();
+        switchTab('register');
+      } else {
+        alert("Parol noto'g'ri.");
+      }
+    } catch(e){
+      alert("Xatolik yuz berdi. Qaytadan urinib ko'ring.");
+    }
+  }
+
+  async function tryRestoreAdminSession(){
+    if (!adminPassword || !backendConfigured()) return;
+    try {
+      const res = await fetch(API_BASE + '/api/admin-login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ password: adminPassword })
+      });
+      const data = await res.json();
+      if (data.success){
+        isAdminAuthed = true;
+        showAdminTab();
+      } else {
+        sessionStorage.removeItem('estet_admin_pw');
+        adminPassword = null;
+      }
+    } catch(e){}
+  }
+
+  // Boshlanishida "Ro'yxat" tabi har doim yashirin — faqat parol orqali ochiladi
+  (function(){
+    const regBtn = document.querySelector('.tab-btn[data-tab="register"]');
+    if (regBtn) regBtn.style.display = 'none';
+  })();
+
+  // ---------- TAB SWITCHING ----------
+  function switchTab(name){
+    if (name === 'register' && !isAdminAuthed){
+      openAdminModal();
+      return;
+    }
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('is-active'));
+    document.getElementById('page-'+name).classList.add('is-active');
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('is-active', b.dataset.tab===name));
+    if (name==='ai' && chatHistory.length===0) initChat();
+  }
+
+  // ---------- SCROLL REVEAL ----------
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('is-visible'); io.unobserve(e.target); } });
+  }, {threshold:.15});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  // ---------- CHAT LOGIC ----------
+  let chatHistory = [];
+  const chatBody = document.getElementById('chatBody');
+
+  function addBubble(text, role){
+    const div = document.createElement('div');
+    div.className = 'msg ' + (role==='user' ? 'user' : 'bot');
+    div.textContent = text;
+    chatBody.appendChild(div);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return div;
+  }
+
+  function addTyping(){
+    const div = document.createElement('div');
+    div.className = 'msg bot typing';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    chatBody.appendChild(div);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return div;
+  }
+
+  function initChat(){
+    addBubble(T('aiInitMsg'), 'bot');
+  }
+
+  async function callBackend(userText){
+    if (!backendConfigured()){
+      addBubble("⚠️ Dasturchi uchun: API_BASE hali sozlanmagan.", 'bot');
+      return;
+    }
+    const typingEl = addTyping();
+    try {
+      const res = await fetch(API_BASE + '/api/chat', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ message: userText, history: chatHistory, lang: currentLang })
+      });
+      const data = await res.json();
+      typingEl.remove();
+      if (data.reply){
+        addBubble(data.reply, 'bot');
+        chatHistory.push({role:'user', content:userText});
+        chatHistory.push({role:'assistant', content:data.reply});
+      } else {
+        addBubble(T('chatErrorGeneric'), 'bot');
+      }
+    } catch(err){
+      typingEl.remove();
+      addBubble(T('chatErrorNetwork'), 'bot');
+    }
+  }
+
+  function sendMessage(){
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    addBubble(text, 'user');
+    input.value = '';
+    callBackend(text);
+  }
+
+  function sendQuickMessage(text){
+    addBubble(text, 'user');
+    callBackend(text);
+  }
+
+  function askAboutPackage(name){
+    trackPackageInterest(name);
+    switchTab('ai');
+    setTimeout(()=>sendQuickMessage(T('askPackageTemplate').replace('{name}', name)), 200);
+  }
+
+  function trackPackageInterest(name){
+    if (!backendConfigured()) return;
+    fetch(API_BASE + '/api/track-package', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ package: name })
+    }).catch(()=>{});
+  }
+
+  // ---------- BRON QILISH LOGIKASI ----------
+  const TIME_SLOTS = ["09:00","11:00","13:00","15:00","17:00"];
+  let selectedDayLabel = null, selectedTime = null;
+
+  function buildDaySelector(){
+    const holder = document.getElementById('daySelector');
+    if (!holder || holder.childElementCount) return;
+    const today = new Date();
+    for (let i=0;i<7;i++){
+      const d = new Date(today);
+      d.setDate(today.getDate()+i);
+      const dayNames = TRANSLATIONS[currentLang].days;
+      const monthNames = TRANSLATIONS[currentLang].months;
+      const shortLabel = i===0 ? T('todayLabel') : i===1 ? T('tomorrowLabel') : dayNames[d.getDay()];
+      const chip = document.createElement('div');
+      chip.className = 'day-chip';
+      chip.textContent = shortLabel + " " + d.getDate();
+      chip.dataset.value = `${d.getDate()}-${monthNames[d.getMonth()]}`;
+      chip.onclick = () => selectDay(chip);
+      holder.appendChild(chip);
+    }
+  }
+
+  function selectDay(chip){
+    document.querySelectorAll('.day-chip').forEach(c=>c.classList.remove('is-active'));
+    chip.classList.add('is-active');
+    selectedDayLabel = chip.textContent;
+    selectedTime = null;
+    buildSlotGrid();
+    document.getElementById('bookingForm').style.display = 'none';
+  }
+
+  function buildSlotGrid(){
+    const grid = document.getElementById('slotGrid');
+    grid.style.display = 'grid';
+    grid.innerHTML = '';
+    TIME_SLOTS.forEach(t=>{
+      const btn = document.createElement('div');
+      btn.className = 'slot-btn';
+      btn.textContent = t;
+      btn.onclick = () => selectTime(btn, t);
+      grid.appendChild(btn);
+    });
+  }
+
+  function selectTime(btn, t){
+    document.querySelectorAll('.slot-btn').forEach(b=>b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    selectedTime = t;
+    document.getElementById('bookSummaryText').textContent = `${selectedDayLabel}, ${t}`;
+    document.getElementById('bookingForm').style.display = 'block';
+  }
+
+  async function submitBooking(){
+    const name = document.getElementById('bookName').value.trim();
+    const phone = document.getElementById('bookPhone').value.trim();
+    if (!name || !phone){
+      addBubbleAlert(T('bookFillFields'));
+      return;
+    }
+    const btn = document.getElementById('bookSubmitBtn');
+    if (btn.disabled) return;  // qayta bosishni oldini olish
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    try {
+      const res = await fetch(API_BASE + '/api/book', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ name, phone, day: selectedDayLabel, time: selectedTime })
+      });
+      const data = await res.json();
+      if (data.success){
+        document.getElementById('bookingStep1').style.display = 'none';
+        document.getElementById('bookingSuccess').style.display = 'flex';
+      } else {
+        addBubbleAlert(T('bookGenericError'));
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
+    } catch(err){
+      addBubbleAlert(T('bookNetworkError'));
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+  }
+
+  function addBubbleAlert(text){
+    alert(text);
+  }
+
+  applyLanguage(detectInitialLang());
+  tryRestoreAdminSession();
+
+  // ---------- RO'YXATDAN O'TISH LOGIKASI ----------
+  async function submitRegister(){
+    const name = document.getElementById('regName').value.trim();
+    const phone = document.getElementById('regPhone').value.trim();
+    const birth = document.getElementById('regBirth').value;
+    const address = document.getElementById('regAddress').value.trim();
+    const passport = document.getElementById('regPassport').value.trim();
+    const pkg = document.getElementById('regPackage').value;
+    const note = document.getElementById('regNote').value.trim();
+    const opDate = document.getElementById('regOpDate').value;
+
+    if (!name || !phone || !address){
+      alert("Iltimos, kamida F.I.Sh, telefon va manzilni to'ldiring.");
+      return;
+    }
+
+    const btn = document.getElementById('regSubmitBtn');
+    if (btn.disabled) return;  // qayta bosishni oldini olish
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+
+    try {
+      const res = await fetch(API_BASE + '/api/register', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'X-Admin-Password': adminPassword || ''},
+        body: JSON.stringify({ name, phone, birth, address, passport, package: pkg, note, operation_date: opDate })
+      });
+      const data = await res.json();
+      if (data.success){
+        document.getElementById('registerStep1').style.display = 'none';
+        document.getElementById('registerSuccess').style.display = 'flex';
+      } else {
+        alert("Xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.");
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
+    } catch(err){
+      alert("Internet aloqasi bilan muammo. Iltimos qaytadan urinib ko'ring.");
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+  }
+
+  // ---------- HERO 3D GRAFT-CONSTELLATION ----------
+  (function(){
+    const canvas = document.getElementById('heroCanvas');
+    if (!canvas || !window.THREE) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const holder = canvas.parentElement;
+    let w = holder.clientWidth, h = holder.clientHeight;
+    const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setSize(w,h);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, w/h, 0.1, 100);
+    camera.position.set(0,0,7.5);
+    const group = new THREE.Group();
+    scene.add(group);
+    const COUNT = 190, radius = 2.4;
+    const positions = [], colors = [];
+    const forest = new THREE.Color(0x1B4332), gold = new THREE.Color(0xB08D57);
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    for (let i=0;i<COUNT;i++){
+      const y = 1 - (i/(COUNT-1))*2;
+      const r = Math.sqrt(1-y*y);
+      const theta = golden*i;
+      const x = Math.cos(theta)*r, z = Math.sin(theta)*r;
+      positions.push(x*radius, y*radius, z*radius);
+      const c = (i % 9 === 0) ? gold : forest;
+      colors.push(c.r,c.g,c.b);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors,3));
+    const mat = new THREE.PointsMaterial({size:0.075, vertexColors:true, sizeAttenuation:true, transparent:true, opacity:0.95});
+    group.add(new THREE.Points(geo, mat));
+    const linePositions = [];
+    const threshold = 0.62;
+    for (let i=0;i<COUNT;i++){
+      for (let j=i+1;j<COUNT;j++){
+        const dx=positions[i*3]-positions[j*3], dy=positions[i*3+1]-positions[j*3+1], dz=positions[i*3+2]-positions[j*3+2];
+        if (Math.sqrt(dx*dx+dy*dy+dz*dz) < threshold){
+          linePositions.push(positions[i*3],positions[i*3+1],positions[i*3+2]);
+          linePositions.push(positions[j*3],positions[j*3+1],positions[j*3+2]);
+        }
+      }
+    }
+    const lineGeo = new THREE.BufferGeometry();
+    lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions,3));
+    const lineMat = new THREE.LineBasicMaterial({color:0x1B4332, transparent:true, opacity:0.08});
+    group.add(new THREE.LineSegments(lineGeo, lineMat));
+    group.rotation.x = 0.3;
+    let targetRotY=0, targetRotX=0.3;
+    window.addEventListener('pointermove', (e)=>{
+      targetRotY = ((e.clientX/window.innerWidth)-0.5)*0.6;
+      targetRotX = 0.3 + ((e.clientY/window.innerHeight)-0.5)*0.3;
+    });
+    window.addEventListener('resize', ()=>{
+      w = holder.clientWidth; h = holder.clientHeight;
+      renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix();
+    });
+    let t=0;
+    (function animate(){
+      requestAnimationFrame(animate);
+      if (!reduceMotion){
+        t += 0.0035;
+        group.rotation.y += (targetRotY + t - group.rotation.y) * 0.02;
+        group.rotation.x += (targetRotX - group.rotation.x) * 0.04;
+      }
+      renderer.render(scene, camera);
+    })();
+  })();
+</script>
+</body>
+</html>
