@@ -368,7 +368,10 @@
       </div>
     </section>
 
-    <footer><p>© Estet Clinic — Estetik va plastik jarrohlik markazi</p></footer>
+    <footer>
+      <p>© Estet Clinic — Estetik va plastik jarrohlik markazi</p>
+      <p style="margin-top:8px;"><a href="#" onclick="openAdminModal();return false;" style="font-size:11px;color:var(--ink-muted);text-decoration:underline;">🔐 Admin</a></p>
+    </footer>
   </div>
 </div>
 
@@ -415,7 +418,7 @@
           <div class="book-summary"><span data-i18n="bookSummaryLabel">Tanlangan vaqt</span><b id="bookSummaryText"></b></div>
           <input type="text" id="bookName" class="book-input" data-i18n-placeholder="bookNamePlaceholder" placeholder="Ismingiz" style="margin-top:16px;">
           <input type="tel" id="bookPhone" class="book-input" data-i18n-placeholder="bookPhonePlaceholder" placeholder="Telefon raqamingiz (+998...)" style="margin-top:10px;">
-          <button class="btn btn-primary" style="margin-top:14px;" onclick="submitBooking()" data-i18n="bookSubmitBtn">Bron qilish</button>
+          <button class="btn btn-primary" id="bookSubmitBtn" style="margin-top:14px;" onclick="submitBooking()" data-i18n="bookSubmitBtn">Bron qilish</button>
         </div>
       </div>
 
@@ -479,7 +482,7 @@
           <span class="form-label">Amaliyot sanasi <span style="font-weight:400;">(agar bo'lgan/rejalashtirilgan bo'lsa)</span></span>
           <input type="date" id="regOpDate" class="book-input">
         </div>
-        <button class="btn btn-primary" style="margin-top:18px;" onclick="submitRegister()">Ro'yxatga olish</button>
+        <button class="btn btn-primary" id="regSubmitBtn" style="margin-top:18px;" onclick="submitRegister()">Ro'yxatga olish</button>
       </div>
 
       <div id="registerSuccess" class="empty-state" style="display:none;">
@@ -576,10 +579,20 @@
   </div>
 </div>
 
+<!-- ================= ADMIN LOGIN MODAL ================= -->
+<div class="lang-modal-overlay" id="adminModalOverlay" onclick="closeAdminModalOutside(event)">
+  <div class="lang-modal">
+    <div class="lang-modal-handle"></div>
+    <div class="lang-modal-title">🔐 Admin kirish</div>
+    <input type="password" id="adminPasswordInput" class="book-input" placeholder="Parolni kiriting" onkeydown="if(event.key==='Enter')submitAdminLogin();" style="margin-bottom:14px;">
+    <button class="btn btn-primary" onclick="submitAdminLogin()">Kirish</button>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
   // ======== SOZLAMA: backend API manzili (deploy qilingach shu yerga qo'ying) ========
-  const API_BASE = "https://estet-clinic.onrender.com";
+  const API_BASE = "https://SIZNING-RENDER-MANZILINGIZ.onrender.com";
 
   // ---------- Telegram Mini App bootstrap ----------
   const tg = window.Telegram ? window.Telegram.WebApp : null;
@@ -907,27 +920,79 @@
       .catch(()=> addBubble(T('chatErrorNetwork'), 'bot'));
   }
 
-  // ======== ADMIN RO'YXATI (Telegram ID) ========
-  // bot.py dagi ADMIN_CHAT_IDS bilan BIR XIL raqamlarni shu yerga yozing
-  const ADMIN_IDS = [1388809938]; // <-- o'z Telegram ID'ingizga almashtiring (bir nechta bo'lsa vergul bilan: [111, 222])
+  // ======== ADMIN PANEL (parol bilan) ========
+  let adminPassword = sessionStorage.getItem('estet_admin_pw') || null;
+  let isAdminAuthed = false;
 
-  function isAdminUser(){
-    try {
-      const uid = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : null;
-      return !!(uid && ADMIN_IDS.includes(uid));
-    } catch(e){ return false; }
+  function openAdminModal(){ document.getElementById('adminModalOverlay').classList.add('is-open'); }
+  function closeAdminModalOutside(e){ if (e.target.id === 'adminModalOverlay') e.target.classList.remove('is-open'); }
+
+  function showAdminTab(){
+    const regBtn = document.querySelector('.tab-btn[data-tab="register"]');
+    if (regBtn) regBtn.style.display = '';
   }
 
-  // Admin bo'lmasa, "Ro'yxat" tabini butunlay yashiramiz
-  if (!isAdminUser()){
+  async function submitAdminLogin(){
+    const input = document.getElementById('adminPasswordInput');
+    const pw = input.value;
+    if (!pw) return;
+    if (!backendConfigured()){
+      alert("Dasturchi uchun: API_BASE hali sozlanmagan.");
+      return;
+    }
+    try {
+      const res = await fetch(API_BASE + '/api/admin-login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ password: pw })
+      });
+      const data = await res.json();
+      if (data.success){
+        adminPassword = pw;
+        isAdminAuthed = true;
+        sessionStorage.setItem('estet_admin_pw', pw);
+        input.value = '';
+        document.getElementById('adminModalOverlay').classList.remove('is-open');
+        showAdminTab();
+        switchTab('register');
+      } else {
+        alert("Parol noto'g'ri.");
+      }
+    } catch(e){
+      alert("Xatolik yuz berdi. Qaytadan urinib ko'ring.");
+    }
+  }
+
+  async function tryRestoreAdminSession(){
+    if (!adminPassword || !backendConfigured()) return;
+    try {
+      const res = await fetch(API_BASE + '/api/admin-login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ password: adminPassword })
+      });
+      const data = await res.json();
+      if (data.success){
+        isAdminAuthed = true;
+        showAdminTab();
+      } else {
+        sessionStorage.removeItem('estet_admin_pw');
+        adminPassword = null;
+      }
+    } catch(e){}
+  }
+
+  // Boshlanishida "Ro'yxat" tabi har doim yashirin — faqat parol orqali ochiladi
+  (function(){
     const regBtn = document.querySelector('.tab-btn[data-tab="register"]');
     if (regBtn) regBtn.style.display = 'none';
-  }
+  })();
 
   // ---------- TAB SWITCHING ----------
   function switchTab(name){
-    if (name === 'register' && !isAdminUser()){
-      name = 'home'; // admin bo'lmagan foydalanuvchi hech qachon bu sahifaga o'tolmaydi
+    if (name === 'register' && !isAdminAuthed){
+      openAdminModal();
+      return;
     }
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('is-active'));
     document.getElementById('page-'+name).classList.add('is-active');
@@ -1083,6 +1148,10 @@
       addBubbleAlert(T('bookFillFields'));
       return;
     }
+    const btn = document.getElementById('bookSubmitBtn');
+    if (btn.disabled) return;  // qayta bosishni oldini olish
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
     try {
       const res = await fetch(API_BASE + '/api/book', {
         method: 'POST',
@@ -1095,9 +1164,13 @@
         document.getElementById('bookingSuccess').style.display = 'flex';
       } else {
         addBubbleAlert(T('bookGenericError'));
+        btn.disabled = false;
+        btn.style.opacity = '1';
       }
     } catch(err){
       addBubbleAlert(T('bookNetworkError'));
+      btn.disabled = false;
+      btn.style.opacity = '1';
     }
   }
 
@@ -1106,6 +1179,7 @@
   }
 
   applyLanguage(detectInitialLang());
+  tryRestoreAdminSession();
 
   // ---------- RO'YXATDAN O'TISH LOGIKASI ----------
   async function submitRegister(){
@@ -1123,10 +1197,15 @@
       return;
     }
 
+    const btn = document.getElementById('regSubmitBtn');
+    if (btn.disabled) return;  // qayta bosishni oldini olish
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+
     try {
       const res = await fetch(API_BASE + '/api/register', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: {'Content-Type':'application/json', 'X-Admin-Password': adminPassword || ''},
         body: JSON.stringify({ name, phone, birth, address, passport, package: pkg, note, operation_date: opDate })
       });
       const data = await res.json();
@@ -1135,9 +1214,13 @@
         document.getElementById('registerSuccess').style.display = 'flex';
       } else {
         alert("Xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.");
+        btn.disabled = false;
+        btn.style.opacity = '1';
       }
     } catch(err){
       alert("Internet aloqasi bilan muammo. Iltimos qaytadan urinib ko'ring.");
+      btn.disabled = false;
+      btn.style.opacity = '1';
     }
   }
 

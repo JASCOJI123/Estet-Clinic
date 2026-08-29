@@ -28,6 +28,7 @@ GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
 GOOGLE_CREDS_FILE = os.environ.get("GOOGLE_CREDS_FILE", "google_creds.json")
 ADMIN_CHAT_IDS = [x.strip() for x in os.environ.get("ADMIN_CHAT_IDS", "").split(",") if x.strip()]
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "")  # Mini App'ning HTTPS manzili (GitHub Pages va h.k.)
+ADMIN_PANEL_PASSWORD = os.environ.get("ADMIN_PANEL_PASSWORD", "")  # Mini App'dagi Ro'yxat bo'limi uchun parol
 
 GROQ_TEXT_MODEL = "openai/gpt-oss-120b"
 GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"  # rasm tahlili uchun
@@ -607,13 +608,38 @@ async def notify_referrer_if_any(user_id: int):
         except Exception as e:
             logging.error(f"Referral admin xabarida xato: {e}")
 
+FIELD_EMOJIS = {
+    "ism": "👤", "F.I.Sh": "👤", "telefon": "📞", "tug'ilgan sana": "🎂",
+    "manzil": "📍", "pasport": "🪪", "paket": "📦", "amaliyot sanasi": "🗓",
+    "eslatma": "📝", "sana": "📆", "vaqt": "⏰",
+}
+FIELD_LABELS = {
+    "ism": "Ism", "F.I.Sh": "F.I.Sh", "telefon": "Telefon", "tug'ilgan sana": "Tug'ilgan sana",
+    "manzil": "Manzil", "pasport": "Pasport", "paket": "Paket", "amaliyot sanasi": "Amaliyot sanasi",
+    "eslatma": "Eslatma", "sana": "Sana", "vaqt": "Vaqt",
+}
+
+def format_lead_fields(info: str) -> str:
+    """'ism=X, telefon=Y' kabi qatorni chiroyli, har biri alohida qatorda, emoji bilan ko'rsatadi."""
+    lines = []
+    for part in info.split(", "):
+        if "=" not in part:
+            continue
+        key, _, value = part.partition("=")
+        key = key.strip()
+        value = value.strip() or "—"
+        emoji = FIELD_EMOJIS.get(key, "▪️")
+        label = FIELD_LABELS.get(key, key.capitalize())
+        lines.append(f"{emoji} {label}: {value}")
+    return "\n".join(lines)
+
 async def notify_manager(message: Message, lead_info: str):
     user = message.from_user
     text = (
-        f"🆕 YANGI LEAD\n"
-        f"Foydalanuvchi: @{user.username or '-'} (ID: {user.id})\n"
-        f"{lead_info}\n"
-        f"Vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        f"🆕 YANGI LEAD (Telegram chat)\n\n"
+        f"{format_lead_fields(lead_info)}\n"
+        f"💬 Foydalanuvchi: @{user.username or '-'} (ID: {user.id})\n\n"
+        f"🕒 {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     )
     if MANAGER_CHAT_ID:
         await bot.send_message(MANAGER_CHAT_ID, text)
@@ -749,11 +775,29 @@ async def cors_middleware(request, handler):
             resp = e
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Admin-Password"
     return resp
 
 async def handle_health(request):
     return web.Response(text="OK")
+
+def check_admin_password(request) -> bool:
+    """Mini App'dan kelgan X-Admin-Password headerini tekshiradi."""
+    if not ADMIN_PANEL_PASSWORD:
+        logging.warning("ADMIN_PANEL_PASSWORD sozlanmagan — Ro'yxat API himoyasiz qolmoqda!")
+        return True
+    provided = request.headers.get("X-Admin-Password", "")
+    return provided == ADMIN_PANEL_PASSWORD
+
+async def handle_admin_login_api(request):
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"success": False}, status=400)
+    password = body.get("password", "")
+    if ADMIN_PANEL_PASSWORD and password == ADMIN_PANEL_PASSWORD:
+        return web.json_response({"success": True})
+    return web.json_response({"success": False}, status=401)
 
 async def handle_chat_api(request):
     """Mini App'ning 'AI Yordamchi' tabi shu endpointga so'rov yuboradi."""
@@ -798,7 +842,10 @@ async def handle_chat_api(request):
                 try:
                     await bot.send_message(
                         MANAGER_CHAT_ID,
-                        f"🆕 YANGI LEAD (Mini App)\n{lead_info}\nVaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                        f"🆕 YANGI LEAD (Mini App — AI chat)\n\n"
+                        f"{format_lead_fields(lead_info)}\n"
+                        f"💬 Foydalanuvchi: @{webapp_username}\n\n"
+                        f"🕒 {datetime.now().strftime('%Y-%m-%d %H:%M')}",
                     )
                 except Exception as e:
                     logging.error(f"Mini App lead xabarini yuborishda xato: {e}")
@@ -835,7 +882,9 @@ async def handle_book_api(request):
         try:
             await bot.send_message(
                 MANAGER_CHAT_ID,
-                f"📅 YANGI BRON (Mini App)\n{info}\nYuborilgan vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                f"📅 YANGI BRON (Mini App)\n\n"
+                f"{format_lead_fields(info)}\n\n"
+                f"🕒 {datetime.now().strftime('%Y-%m-%d %H:%M')}",
             )
         except Exception as e:
             logging.error(f"Bron xabarini yuborishda xato: {e}")
@@ -851,6 +900,9 @@ async def handle_book_api(request):
 
 async def handle_register_api(request):
     """Mini App'ning 'Ro'yxat' tabidan kelgan to'liq mijoz ma'lumoti."""
+    if not check_admin_password(request):
+        return web.json_response({"error": "unauthorized"}, status=401)
+
     try:
         body = await request.json()
     except Exception:
@@ -878,8 +930,9 @@ async def handle_register_api(request):
         try:
             await bot.send_message(
                 MANAGER_CHAT_ID,
-                f"🧾 YANGI MIJOZ RO'YXATGA OLINDI (Mini App)\n{info}\n"
-                f"Vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                f"🧾 YANGI MIJOZ RO'YXATGA OLINDI (Mini App)\n\n"
+                f"{format_lead_fields(info)}\n\n"
+                f"🕒 {datetime.now().strftime('%Y-%m-%d %H:%M')}",
             )
         except Exception as e:
             logging.error(f"Ro'yxat xabarini yuborishda xato: {e}")
@@ -942,6 +995,8 @@ async def start_web_server():
     app.router.add_route("OPTIONS", "/api/book", handle_health)
     app.router.add_post("/api/register", handle_register_api)
     app.router.add_route("OPTIONS", "/api/register", handle_health)
+    app.router.add_post("/api/admin-login", handle_admin_login_api)
+    app.router.add_route("OPTIONS", "/api/admin-login", handle_health)
     app.router.add_post("/api/track-package", handle_track_package_api)
     app.router.add_route("OPTIONS", "/api/track-package", handle_health)
     app.router.add_post("/api/handoff", handle_handoff_api)
