@@ -566,7 +566,11 @@ async def handoff_relay_handler(message: Message, state: FSMContext):
             logging.error(f"Handoff relay xatosi: {e}")
 
 # ============ ASOSIY SUHBAT (LLM orqali) ============
-@dp.message(Chat.talking, F.text)
+# Chat.talking sharti olib tashlandi: WEBAPP_URL o'rnatilgan rejimda /start til tanlashni
+# o'tkazib yuborgani uchun mijozlar til tanlamasdan ham matn/rasm/ovoz yuborishi mumkin.
+# Til tanlanmagan bo'lsa default 'uz' ishlatiladi.
+# Faqat shaxsiy chatlarda ishlaydi — operatorlar guruhiga yozilganlarda AI javob bermaydi.
+@dp.message(F.chat.type == "private", F.text, ~F.text.startswith("/"))
 async def chat_handler(message: Message, state: FSMContext):
     data = await state.get_data()
     history = data.get("history", [])
@@ -578,7 +582,7 @@ async def chat_handler(message: Message, state: FSMContext):
     await run_llm_and_reply(message, state, history, lang)
 
 # ============ RASM QABUL QILISH + AI TAHLIL ============
-@dp.message(Chat.talking, F.photo)
+@dp.message(F.chat.type == "private", F.photo)
 async def photo_handler(message: Message, state: FSMContext):
     data = await state.get_data()
     lang = data.get("lang", "uz")
@@ -651,7 +655,7 @@ async def photo_handler(message: Message, state: FSMContext):
     await run_llm_and_reply(message, state, history, lang)
 
 # ============ OVOZLI XABAR QABUL QILISH ============
-@dp.message(Chat.talking, F.voice)
+@dp.message(F.chat.type == "private", F.voice)
 async def voice_handler(message: Message, state: FSMContext):
     data = await state.get_data()
     lang = data.get("lang", "uz")
