@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Ma'lumotlar bazasi
+bot_data.db
+
+# Maxfiy ma'lumotlar
+google_creds.json
+
+# Vaqtinchalik favllar
+voice_*.ogg
+
+# OS
+.DS_Store
+Thumbs.db

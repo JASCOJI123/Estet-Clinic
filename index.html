@@ -601,6 +601,9 @@
     try { tg.setHeaderColor('#ffffff'); tg.setBackgroundColor('#ffffff'); } catch(e){}
   }
 
+  // Har bir API so'roviga Telegram initData (server tomonida HMAC orqali tekshiriladi)
+  function apiInitData(){ return (tg && tg.initData) ? tg.initData : ''; }
+
   // ======== TIL TIZIMI (i18n) ========
   const LANG_LABELS = {uz:'UZ', ru:'RU', tr:'TR', tg:'TJ'};
 
@@ -914,7 +917,7 @@
     fetch(API_BASE + '/api/handoff', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ user_id: uid, username: uname, last_message: lastMsg })
+      body: JSON.stringify({ user_id: uid, username: uname, last_message: lastMsg, init_data: apiInitData() })
     })
       .then(()=> addBubble(T('handoffSent'), 'bot'))
       .catch(()=> addBubble(T('chatErrorNetwork'), 'bot'));
@@ -944,7 +947,7 @@
       const res = await fetch(API_BASE + '/api/admin-login', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ password: pw })
+        body: JSON.stringify({ password: pw, init_data: apiInitData() })
       });
       const data = await res.json();
       if (data.success){
@@ -969,7 +972,7 @@
       const res = await fetch(API_BASE + '/api/admin-login', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ password: adminPassword })
+        body: JSON.stringify({ password: adminPassword, init_data: apiInitData() })
       });
       const data = await res.json();
       if (data.success){
@@ -1047,6 +1050,7 @@
           message: userText, history: chatHistory, lang: currentLang,
           user_id: tgUser ? tgUser.id : 0,
           username: tgUser ? (tgUser.username || '') : '',
+          init_data: apiInitData(),
         })
       });
       const data = await res.json();
@@ -1089,7 +1093,7 @@
     fetch(API_BASE + '/api/track-package', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ package: name })
+      body: JSON.stringify({ package: name, init_data: apiInitData() })
     }).catch(()=>{});
   }
 
@@ -1161,7 +1165,7 @@
       const res = await fetch(API_BASE + '/api/book', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ name, phone, day: selectedDayLabel, time: selectedTime })
+        body: JSON.stringify({ name, phone, day: selectedDayLabel, time: selectedTime, init_data: apiInitData() })
       });
       const data = await res.json();
       if (data.success){
@@ -1211,7 +1215,7 @@
       const res = await fetch(API_BASE + '/api/register', {
         method: 'POST',
         headers: {'Content-Type':'application/json', 'X-Admin-Password': adminPassword || ''},
-        body: JSON.stringify({ name, phone, birth, address, passport, package: pkg, note, operation_date: opDate })
+        body: JSON.stringify({ name, phone, birth, address, passport, package: pkg, note, operation_date: opDate, init_data: apiInitData() })
       });
       const data = await res.json();
       if (data.success){

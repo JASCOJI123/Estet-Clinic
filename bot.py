@@ -1,10 +1,13 @@
 import asyncio
+import hashlib
+import hmac
 import logging
 import os
 import json
 import re
 import sqlite3
 from datetime import datetime, timedelta
+from urllib.parse import parse_qsl
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
@@ -16,7 +19,7 @@ from aiogram.types import (
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-from groq import Groq
+from groq import AsyncGroq
 from aiohttp import web
 import gspread
 from google.oauth2.service_account import Credentials
@@ -30,6 +33,7 @@ GOOGLE_CREDS_FILE = os.environ.get("GOOGLE_CREDS_FILE", "google_creds.json")
 ADMIN_CHAT_IDS = [x.strip() for x in os.environ.get("ADMIN_CHAT_IDS", "").split(",") if x.strip()]
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "")  # Mini App'ning HTTPS manzili (GitHub Pages va h.k.)
 ADMIN_PANEL_PASSWORD = os.environ.get("ADMIN_PANEL_PASSWORD", "")  # Mini App'dagi Ro'yxat bo'limi uchun parol
+REQUIRE_INIT_DATA = os.environ.get("REQUIRE_INIT_DATA", "1") != "0"  # "0" bo'lsa initData tekshiruvi o'chiriladi (faqat test uchun)
 
 GROQ_TEXT_MODEL = "openai/gpt-oss-120b"
 GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"  # rasm tahlili uchun
@@ -40,7 +44,7 @@ FOLLOWUP_DELAY_HOURS = 20  # javobsiz qolgan mijozga necha soatdan keyin eslatma
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
-groq_client = Groq(api_key=GROQ_API_KEY)
+groq_client = AsyncGroq(api_key=GROQ_API_KEY)
 
 # ============ MA'LUMOTLAR BAZASI (statistika + follow-up uchun) ============
 DB_PATH = "bot_data.db"
@@ -378,6 +382,18 @@ HANDOFF_WAITING_MSG = {
     "tg": "✅ Паёми шумо ба оператор фиристода шуд. Оператор дар чати асосии бот ҷавоб медиҳад — лутфан онро назорат кунед.",
 }
 
+HANDOFF_PHOTO_ACK = {
+    "uz": "📸 Rasmingiz operatorga yuborildi. Operator asosiy chatda javob yozadi — iltimos, shu yerni kuzatib turing.",
+    "ru": "📸 Ваше фото отправлено оператору. Оператор ответит в основном чате — пожалуйста, проверяйте его.",
+    "en": "📸 Your photo has been sent to the operator. The operator will reply in the main chat — please keep an eye on it.",
+}
+
+HANDOFF_VOICE_ACK = {
+    "uz": "🎤 Ovozli xabaringiz operatorga yuborildi. Operator asosiy chatda javob yozadi — iltimos, shu yerni kuzatib turing.",
+    "ru": "🎤 Ваше голосовое сообщение отправлено оператору. Оператор ответит в основном чате — пожалуйста, проверяйте его.",
+    "en": "🎤 Your voice message has been sent to the operator. The operator will reply in the main chat — please keep an eye on it.",
+}
+
 # ============ HOLAT (FSM) ============
 class Chat(StatesGroup):
     talking = State()
@@ -567,8 +583,31 @@ async def photo_handler(message: Message, state: FSMContext):
     data = await state.get_data()
     lang = data.get("lang", "uz")
     history = data.get("history", [])
+    user_id = message.from_user.id
 
-    touch_user(message.from_user.id, message.from_user.username or "")
+    touch_user(user_id, message.from_user.username or "")
+
+    # Operator rejimi: rasm operatorga yuboriladi, AI tahlil qilmaydi
+    if is_handoff_active(user_id):
+        if MANAGER_CHAT_ID:
+            try:
+                sent_photo = await bot.send_photo(
+                    MANAGER_CHAT_ID,
+                    message.photo[-1].file_id,
+                    caption=f"📸 Yangi rasm (operator rejimi) — mijoz: @{message.from_user.username or user_id}",
+                    reply_markup=handoff_done_keyboard(user_id),
+                )
+                save_handoff_message(sent_photo.message_id, user_id)
+                sent_prompt = await bot.send_message(
+                    MANAGER_CHAT_ID,
+                    "✍️ Javob yozish uchun shu xabarni bosing:",
+                    reply_markup=ForceReply(input_field_placeholder="Javobingizni shu yerga yozing..."),
+                )
+                save_handoff_message(sent_prompt.message_id, user_id)
+            except Exception as e:
+                logging.error(f"Handoff rasm xatosi: {e}")
+        await message.answer(HANDOFF_PHOTO_ACK.get(lang, HANDOFF_PHOTO_ACK["uz"]))
+        return
 
     file = await bot.get_file(message.photo[-1].file_id)
     file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file.file_path}"
@@ -577,11 +616,11 @@ async def photo_handler(message: Message, state: FSMContext):
         await bot.send_photo(
             MANAGER_CHAT_ID,
             message.photo[-1].file_id,
-            caption=f"📸 Yangi rasm — mijoz: @{message.from_user.username or message.from_user.id}",
+            caption=f"📸 Yangi rasm — mijoz: @{message.from_user.username or user_id}",
         )
 
     try:
-        vision_response = groq_client.chat.completions.create(
+        vision_response = await groq_client.chat.completions.create(
             model=GROQ_VISION_MODEL,
             max_tokens=200,
             messages=[{
@@ -617,16 +656,17 @@ async def voice_handler(message: Message, state: FSMContext):
     data = await state.get_data()
     lang = data.get("lang", "uz")
     history = data.get("history", [])
+    user_id = message.from_user.id
 
-    touch_user(message.from_user.id, message.from_user.username or "")
+    touch_user(user_id, message.from_user.username or "")
 
     file = await bot.get_file(message.voice.file_id)
-    local_path = f"voice_{message.from_user.id}.ogg"
+    local_path = f"voice_{user_id}.ogg"
     await bot.download_file(file.file_path, local_path)
 
     try:
         with open(local_path, "rb") as f:
-            transcript = groq_client.audio.transcriptions.create(
+            transcript = await groq_client.audio.transcriptions.create(
                 file=(local_path, f.read()),
                 model=GROQ_WHISPER_MODEL,
             )
@@ -647,6 +687,22 @@ async def voice_handler(message: Message, state: FSMContext):
         await message.answer(error_msg)
         return
 
+    # Operator rejimi: transkripsiya qilingan matn operatorga yuboriladi, AI javob bermaydi
+    if is_handoff_active(user_id):
+        if MANAGER_CHAT_ID:
+            try:
+                await send_handoff_notice(
+                    MANAGER_CHAT_ID,
+                    f"🎤 OVOZLI XABAR (operator rejimi)\n"
+                    f"👤 @{message.from_user.username or '-'} (ID: {user_id})\n"
+                    f"🎙 Matn: {text}",
+                    user_id,
+                )
+            except Exception as e:
+                logging.error(f"Handoff ovoz xatosi: {e}")
+        await message.answer(HANDOFF_VOICE_ACK.get(lang, HANDOFF_VOICE_ACK["uz"]))
+        return
+
     history.append({"role": "user", "content": text})
     await run_llm_and_reply(message, state, history, lang)
 
@@ -664,7 +720,7 @@ def is_valid_lead_info(info: str) -> bool:
 async def run_llm_and_reply(message: Message, state: FSMContext, history: list, lang: str):
     groq_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
 
-    response = groq_client.chat.completions.create(
+    response = await groq_client.chat.completions.create(
         model=GROQ_TEXT_MODEL,
         max_tokens=600,
         messages=groq_messages,
@@ -949,6 +1005,59 @@ async def cors_middleware(request, handler):
 async def handle_health(request):
     return web.Response(text="OK")
 
+# ============ TELEGRAM WEBAPP initData TEKSHIRUVI (xavfsizlik) ============
+INIT_DATA_MAX_AGE = 86400  # initData 24 soatdan eski bo'lsa qabul qilinmaydi
+
+def _build_init_data_check_string(parsed: dict) -> str:
+    """Barcha maydonlarni (hash dan tashqari) kalit bo'yicha saralab birlashtiradi.
+    Telegram'ning rasmiy algoritmiga to'liq mos: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app"""
+    return "\n".join(f"{k}={v}" for k, v in sorted(parsed.items()))
+
+def validate_telegram_init_data(init_data: str):
+    """Telegram Mini App'dan kelgan initData ni bot token yordamida HMAC-SHA256 orqali tekshiradi.
+    Haqiqiy bo'lsa parsed dict qaytaradi, aks holda None.
+    Manba: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app"""
+    if not init_data or not TELEGRAM_TOKEN:
+        return None
+    try:
+        parsed = dict(parse_qsl(init_data, keep_blank_values=True))
+    except Exception:
+        return None
+    received_hash = parsed.pop("hash", None)
+    if not received_hash:
+        return None
+    try:
+        auth_date = int(parsed.get("auth_date", "0"))
+    except (TypeError, ValueError):
+        return None
+    if datetime.now().timestamp() - auth_date > INIT_DATA_MAX_AGE:
+        return None
+    data_check_string = _build_init_data_check_string(parsed)
+    secret_key = hmac.new(b"WebAppData", TELEGRAM_TOKEN.encode(), hashlib.sha256).digest()
+    calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(calculated_hash, received_hash):
+        return None
+    return parsed
+
+def verify_init_data(init_data: str):
+    """Handlerlar uchun qulay ko'rinish: (ok, parsed) qaytaradi.
+    REQUIRE_INIT_DATA="0" bo'lsa tekshiruv o'tkazib yuboriladi (lokal test uchun)."""
+    if not REQUIRE_INIT_DATA:
+        logging.warning("REQUIRE_INIT_DATA=0 — initData tekshiruvi O'CHIRILGAN (faqat test!)")
+        return True, {}
+    parsed = validate_telegram_init_data(init_data)
+    if parsed is None:
+        return False, {}
+    return True, parsed
+
+def verified_user_id(parsed: dict):
+    """Parsed initData dan foydalanuvchi ID sini chiqaradi (mavjud bo'lmasa None)."""
+    try:
+        user = json.loads(parsed.get("user", "{}"))
+    except (TypeError, ValueError):
+        return None
+    return user.get("id") if isinstance(user, dict) else None
+
 def check_admin_password(request) -> bool:
     """Mini App'dan kelgan X-Admin-Password headerini tekshiradi."""
     if not ADMIN_PANEL_PASSWORD:
@@ -962,6 +1071,11 @@ async def handle_admin_login_api(request):
         body = await request.json()
     except Exception:
         return web.json_response({"success": False}, status=400)
+
+    ok, _ = verify_init_data(str(body.get("init_data") or ""))
+    if not ok:
+        return web.json_response({"success": False}, status=401)
+
     password = body.get("password", "")
     if ADMIN_PANEL_PASSWORD and password == ADMIN_PANEL_PASSWORD:
         return web.json_response({"success": True})
@@ -974,16 +1088,22 @@ async def handle_chat_api(request):
     except Exception:
         return web.json_response({"error": "invalid_json"}, status=400)
 
+    ok, init_parsed = verify_init_data(str(body.get("init_data") or ""))
+    if not ok:
+        return web.json_response({"error": "unauthorized"}, status=401)
+
+    # Foydalanuvchi identifikatsiyasi endi tekshirilgan initData dan olinadi (body'ga ishonilmaydi)
+    webapp_user_id = verified_user_id(init_parsed) or 0
+    webapp_username = body.get("username") or "webapp-mijoz"
+
     user_text = (body.get("message") or "").strip()
     history = body.get("history") or []
     lang = body.get("lang", "uz")
-    webapp_user_id = body.get("user_id") or 0
-    webapp_username = body.get("username") or "webapp-mijoz"
 
     if not user_text:
         return web.json_response({"error": "message_required"}, status=400)
 
-    if str(webapp_user_id).isdigit() and int(webapp_user_id) != 0 and is_handoff_active(int(webapp_user_id)):
+    if webapp_user_id and is_handoff_active(webapp_user_id):
         if MANAGER_CHAT_ID:
             try:
                 await send_handoff_notice(
@@ -991,7 +1111,7 @@ async def handle_chat_api(request):
                     f"💬 MIJOZDAN XABAR (Mini App, operator rejimi)\n"
                     f"👤 @{webapp_username} (ID: {webapp_user_id})\n"
                     f"✉️ {user_text}",
-                    int(webapp_user_id),
+                    webapp_user_id,
                 )
             except Exception as e:
                 logging.error(f"Handoff forward xatosi (webapp): {e}")
@@ -1002,7 +1122,7 @@ async def handle_chat_api(request):
     groq_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
 
     try:
-        response = groq_client.chat.completions.create(
+        response = await groq_client.chat.completions.create(
             model=GROQ_TEXT_MODEL,
             max_tokens=600,
             messages=groq_messages,
@@ -1033,7 +1153,7 @@ async def handle_chat_api(request):
                 except Exception as e:
                     logging.error(f"Mini App lead xabarini yuborishda xato: {e}")
 
-            mark_lead(int(webapp_user_id) if str(webapp_user_id).isdigit() else 0, webapp_username, lead_info, source="webapp-chat")
+            mark_lead(webapp_user_id, webapp_username, lead_info, source="webapp-chat")
 
             append_lead_to_sheet([
                 datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -1050,6 +1170,11 @@ async def handle_book_api(request):
         body = await request.json()
     except Exception:
         return web.json_response({"error": "invalid_json"}, status=400)
+
+    ok, init_parsed = verify_init_data(str(body.get("init_data") or ""))
+    if not ok:
+        return web.json_response({"error": "unauthorized"}, status=401)
+    uid = verified_user_id(init_parsed) or 0
 
     name = (body.get("name") or "").strip()
     phone = (body.get("phone") or "").strip()
@@ -1072,7 +1197,7 @@ async def handle_book_api(request):
         except Exception as e:
             logging.error(f"Bron xabarini yuborishda xato: {e}")
 
-    mark_lead(0, name, info, source="webapp-booking")
+    mark_lead(uid, name, info, source="webapp-booking")
 
     append_lead_to_sheet([
         datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -1083,13 +1208,18 @@ async def handle_book_api(request):
 
 async def handle_register_api(request):
     """Mini App'ning 'Ro'yxat' tabidan kelgan to'liq mijoz ma'lumoti."""
-    if not check_admin_password(request):
-        return web.json_response({"error": "unauthorized"}, status=401)
-
     try:
         body = await request.json()
     except Exception:
         return web.json_response({"error": "invalid_json"}, status=400)
+
+    # Parol header'i + Telegram initData — ikkalasi ham talab qilinadi
+    if not check_admin_password(request):
+        return web.json_response({"error": "unauthorized"}, status=401)
+    ok, init_parsed = verify_init_data(str(body.get("init_data") or ""))
+    if not ok:
+        return web.json_response({"error": "unauthorized"}, status=401)
+    uid = verified_user_id(init_parsed) or 0
 
     name = (body.get("name") or "").strip()
     phone = (body.get("phone") or "").strip()
@@ -1120,7 +1250,7 @@ async def handle_register_api(request):
         except Exception as e:
             logging.error(f"Ro'yxat xabarini yuborishda xato: {e}")
 
-    mark_lead(0, name, info, source="webapp-register")
+    mark_lead(uid, name, info, source="webapp-register")
     save_registration(name, phone, birth, address, passport, package, note, operation_date)
 
     append_lead_to_sheet([
@@ -1136,6 +1266,12 @@ async def handle_track_package_api(request):
         body = await request.json()
     except Exception:
         return web.json_response({"error": "invalid_json"}, status=400)
+
+    # Bu statistikaya oid endpoint — initData noto'g'ri bo'lsa jimgina o'tkazib yuboriladi
+    ok, _ = verify_init_data(str(body.get("init_data") or ""))
+    if not ok:
+        return web.json_response({"success": False})
+
     package = (body.get("package") or "").strip()
     if not package:
         return web.json_response({"error": "package_required"}, status=400)
@@ -1149,12 +1285,18 @@ async def handle_handoff_api(request):
     except Exception:
         return web.json_response({"error": "invalid_json"}, status=400)
 
-    user_id = body.get("user_id") or "-"
+    # Handoff faqat tekshirilgan (haqiqiy Telegram) foydalanuvchi uchun yoqiladi
+    ok, init_parsed = verify_init_data(str(body.get("init_data") or ""))
+    if not ok:
+        return web.json_response({"error": "unauthorized"}, status=401)
+    user_id = verified_user_id(init_parsed)
+    if not user_id:
+        return web.json_response({"error": "unauthorized"}, status=401)
+
     username = body.get("username") or ""
     last_message = (body.get("last_message") or "").strip()
 
-    if str(user_id).isdigit():
-        set_handoff(int(user_id), True)
+    set_handoff(user_id, True)
 
     contact_line = f"@{username}" if username else "username yo'q"
     text = (
@@ -1163,9 +1305,9 @@ async def handle_handoff_api(request):
         f"So'nggi xabari: {last_message or '-'}\n"
         f"Vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     )
-    if MANAGER_CHAT_ID and str(user_id).isdigit():
+    if MANAGER_CHAT_ID:
         try:
-            await send_handoff_notice(MANAGER_CHAT_ID, text, int(user_id))
+            await send_handoff_notice(MANAGER_CHAT_ID, text, user_id)
         except Exception as e:
             logging.error(f"Handoff xabarini yuborishda xato: {e}")
 
