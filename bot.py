@@ -11,7 +11,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.dispatcher.event.bases import SkipHandler
 from aiogram.types import (
     Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove,
-    InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo,
+    InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, ForceReply,
 )
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -172,6 +172,21 @@ def handoff_done_keyboard(user_id):
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="✅ Suhbatni yakunlash", callback_data=f"donehandoff_{user_id}")
     ]])
+
+async def send_handoff_notice(chat_id, info_text: str, user_id: int):
+    """Guruhga ikkita xabar yuboradi:
+    1) to'liq ma'lumot + 'Suhbatni yakunlash' tugmasi
+    2) 'shu yerga yozing' — bosilganda yozish oynasi avtomatik shu xabarga
+       javob berish (reply) rejimiga o'tadi, qo'lda Reply bosish shart emas."""
+    sent_info = await bot.send_message(chat_id, info_text, reply_markup=handoff_done_keyboard(user_id))
+    save_handoff_message(sent_info.message_id, user_id)
+
+    sent_prompt = await bot.send_message(
+        chat_id,
+        "✍️ Javob yozish uchun shu xabarni bosing:",
+        reply_markup=ForceReply(input_field_placeholder="Javobingizni shu yerga yozing..."),
+    )
+    save_handoff_message(sent_prompt.message_id, user_id)
 
 def track_package_interest(package: str):
     today = datetime.now().strftime("%Y-%m-%d")
@@ -524,15 +539,13 @@ async def handoff_relay_handler(message: Message, state: FSMContext):
 
     if MANAGER_CHAT_ID:
         try:
-            sent = await bot.send_message(
+            await send_handoff_notice(
                 MANAGER_CHAT_ID,
                 f"💬 MIJOZDAN XABAR (operator rejimi)\n"
                 f"👤 @{message.from_user.username or '-'} (ID: {message.from_user.id})\n"
-                f"✉️ {message.text}\n\n"
-                f"👉 Javob berish uchun shu xabarga Reply qiling",
-                reply_markup=handoff_done_keyboard(message.from_user.id),
+                f"✉️ {message.text}",
+                message.from_user.id,
             )
-            save_handoff_message(sent.message_id, message.from_user.id)
         except Exception as e:
             logging.error(f"Handoff relay xatosi: {e}")
 
@@ -973,15 +986,13 @@ async def handle_chat_api(request):
     if str(webapp_user_id).isdigit() and int(webapp_user_id) != 0 and is_handoff_active(int(webapp_user_id)):
         if MANAGER_CHAT_ID:
             try:
-                sent = await bot.send_message(
+                await send_handoff_notice(
                     MANAGER_CHAT_ID,
                     f"💬 MIJOZDAN XABAR (Mini App, operator rejimi)\n"
                     f"👤 @{webapp_username} (ID: {webapp_user_id})\n"
-                    f"✉️ {user_text}\n\n"
-                    f"👉 Javob berish uchun shu xabarga Reply qiling",
-                    reply_markup=handoff_done_keyboard(webapp_user_id),
+                    f"✉️ {user_text}",
+                    int(webapp_user_id),
                 )
-                save_handoff_message(sent.message_id, int(webapp_user_id))
             except Exception as e:
                 logging.error(f"Handoff forward xatosi (webapp): {e}")
         waiting_msg = HANDOFF_WAITING_MSG.get(lang, HANDOFF_WAITING_MSG["uz"])
@@ -1150,15 +1161,11 @@ async def handle_handoff_api(request):
         f"🙋 MIJOZ OPERATOR BILAN GAPLASHISHNI SO'RADI\n"
         f"Foydalanuvchi: {contact_line} (ID: {user_id})\n"
         f"So'nggi xabari: {last_message or '-'}\n"
-        f"Vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
-        f"👉 Javob berish uchun shu xabarga Reply qiling"
+        f"Vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     )
-    if MANAGER_CHAT_ID:
+    if MANAGER_CHAT_ID and str(user_id).isdigit():
         try:
-            kb = handoff_done_keyboard(user_id) if str(user_id).isdigit() else None
-            sent = await bot.send_message(MANAGER_CHAT_ID, text, reply_markup=kb)
-            if str(user_id).isdigit():
-                save_handoff_message(sent.message_id, int(user_id))
+            await send_handoff_notice(MANAGER_CHAT_ID, text, int(user_id))
         except Exception as e:
             logging.error(f"Handoff xabarini yuborishda xato: {e}")
 
