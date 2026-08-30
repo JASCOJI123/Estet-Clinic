@@ -664,6 +664,17 @@ async def voice_handler(message: Message, state: FSMContext):
 
     touch_user(user_id, message.from_user.username or "")
 
+    # Ovoz faylini operator guruhiga ham yuborish (normal AI rejimida ham)
+    if MANAGER_CHAT_ID:
+        try:
+            await bot.send_voice(
+                MANAGER_CHAT_ID,
+                message.voice.file_id,
+                caption=f"🎤 Yangi ovoz — mijoz: @{message.from_user.username or user_id}",
+            )
+        except Exception as e:
+            logging.error(f"Ovoz operatorga yuborishda xato: {e}")
+
     file = await bot.get_file(message.voice.file_id)
     local_path = f"voice_{user_id}.ogg"
     await bot.download_file(file.file_path, local_path)
