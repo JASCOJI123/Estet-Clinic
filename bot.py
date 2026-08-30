@@ -86,6 +86,12 @@ def init_db():
         )
     """)
     c.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)")
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS handoff_messages (
+            message_id INTEGER PRIMARY KEY,
+            user_id INTEGER
+        )
+    """)
     # Eski bazalarda yo'q ustunlarni xavfsiz qo'shish (migratsiya)
     for alter_sql in [
         "ALTER TABLE users ADD COLUMN referred_by INTEGER",
@@ -144,6 +150,28 @@ def is_handoff_active(user_id: int) -> bool:
     row = c.fetchone()
     conn.close()
     return bool(row and row[0])
+
+def save_handoff_message(message_id: int, user_id: int):
+    """Guruhga yuborilgan xabar ID'sini mijoz ID'siga bog'laydi — shunda operator
+    shu xabarga 'Reply' qilsa, tizim kimga javob berilayotganini biladi."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT OR REPLACE INTO handoff_messages (message_id, user_id) VALUES (?,?)", (message_id, user_id))
+    conn.commit()
+    conn.close()
+
+def get_handoff_user(message_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT user_id FROM handoff_messages WHERE message_id=?", (message_id,))
+    row = c.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+def handoff_done_keyboard(user_id):
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="✅ Suhbatni yakunlash", callback_data=f"donehandoff_{user_id}")
+    ]])
 
 def track_package_interest(package: str):
     today = datetime.now().strftime("%Y-%m-%d")
@@ -461,6 +489,29 @@ async def quick_reply_handler(callback):
     await callback.message.answer(text)
     await callback.answer()
 
+# ============ GURUHDA "REPLY" QILINSA — AVTOMATIK MIJOZGA YUBORISH ============
+@dp.message(F.reply_to_message)
+async def group_reply_handler(message: Message):
+    """Operator guruhda mijoz xabariga oddiy 'Reply' qilsa, bu avtomatik o'sha
+    mijozga yuboriladi — /reply buyrug'ini yozish shart emas."""
+    is_admin_user = bool(ADMIN_CHAT_IDS) and str(message.from_user.id) in ADMIN_CHAT_IDS
+    is_manager_chat = bool(MANAGER_CHAT_ID) and str(message.chat.id) == str(MANAGER_CHAT_ID)
+    if not (is_admin_user or is_manager_chat):
+        raise SkipHandler
+    if not message.text:
+        raise SkipHandler
+
+    target_user_id = get_handoff_user(message.reply_to_message.message_id)
+    if not target_user_id:
+        raise SkipHandler  # bu oddiy reply, handoff bilan bog'liq emas
+
+    try:
+        await bot.send_message(target_user_id, f"👤 Operator:\n{message.text}")
+        set_handoff(target_user_id, True)
+        await message.reply("✅ Yuborildi.")
+    except Exception as e:
+        await message.reply(f"❌ Xabar yuborilmadi: {e}")
+
 # ============ OPERATOR REJIMI: MIJOZ XABARINI OPERATORGA UZATISH ============
 @dp.message(F.text, ~F.text.startswith("/"))
 async def handoff_relay_handler(message: Message, state: FSMContext):
@@ -473,14 +524,15 @@ async def handoff_relay_handler(message: Message, state: FSMContext):
 
     if MANAGER_CHAT_ID:
         try:
-            await bot.send_message(
+            sent = await bot.send_message(
                 MANAGER_CHAT_ID,
                 f"💬 MIJOZDAN XABAR (operator rejimi)\n"
                 f"👤 @{message.from_user.username or '-'} (ID: {message.from_user.id})\n"
                 f"✉️ {message.text}\n\n"
-                f"👉 Javob: /reply {message.from_user.id} xabar\n"
-                f"✅ Yakunlash: /done {message.from_user.id}",
+                f"👉 Javob berish uchun shu xabarga Reply qiling",
+                reply_markup=handoff_done_keyboard(message.from_user.id),
             )
+            save_handoff_message(sent.message_id, message.from_user.id)
         except Exception as e:
             logging.error(f"Handoff relay xatosi: {e}")
 
@@ -772,6 +824,32 @@ async def done_handler(message: Message):
     except Exception:
         pass
 
+# ============ TUGMA: "✅ Suhbatni yakunlash" ============
+@dp.callback_query(F.data.startswith("donehandoff_"))
+async def done_button_handler(callback):
+    is_admin_user = bool(ADMIN_CHAT_IDS) and str(callback.from_user.id) in ADMIN_CHAT_IDS
+    is_manager_chat = bool(MANAGER_CHAT_ID) and str(callback.message.chat.id) == str(MANAGER_CHAT_ID)
+    if not (is_admin_user or is_manager_chat):
+        await callback.answer("Ruxsat yo'q", show_alert=True)
+        return
+
+    try:
+        target_id = int(callback.data.split("_", 1)[1])
+    except (IndexError, ValueError):
+        await callback.answer("Xato")
+        return
+
+    set_handoff(target_id, False)
+    try:
+        await bot.send_message(target_id, "✅ Suhbat AI yordamchiga qaytarildi. Savolingiz bo'lsa yozing.")
+    except Exception:
+        pass
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    await callback.answer("✅ Yakunlandi")
+
 # ============ FOLLOW-UP: JAVOBSIZ MIJOZLARGA ESLATMA ============
 async def followup_checker():
     while True:
@@ -895,14 +973,15 @@ async def handle_chat_api(request):
     if str(webapp_user_id).isdigit() and int(webapp_user_id) != 0 and is_handoff_active(int(webapp_user_id)):
         if MANAGER_CHAT_ID:
             try:
-                await bot.send_message(
+                sent = await bot.send_message(
                     MANAGER_CHAT_ID,
                     f"💬 MIJOZDAN XABAR (Mini App, operator rejimi)\n"
                     f"👤 @{webapp_username} (ID: {webapp_user_id})\n"
                     f"✉️ {user_text}\n\n"
-                    f"👉 Javob: /reply {webapp_user_id} xabar\n"
-                    f"✅ Yakunlash: /done {webapp_user_id}",
+                    f"👉 Javob berish uchun shu xabarga Reply qiling",
+                    reply_markup=handoff_done_keyboard(webapp_user_id),
                 )
+                save_handoff_message(sent.message_id, int(webapp_user_id))
             except Exception as e:
                 logging.error(f"Handoff forward xatosi (webapp): {e}")
         waiting_msg = HANDOFF_WAITING_MSG.get(lang, HANDOFF_WAITING_MSG["uz"])
@@ -1072,12 +1151,14 @@ async def handle_handoff_api(request):
         f"Foydalanuvchi: {contact_line} (ID: {user_id})\n"
         f"So'nggi xabari: {last_message or '-'}\n"
         f"Vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
-        f"👉 Javob berish uchun: /reply {user_id} xabaringiz\n"
-        f"✅ Yakunlash uchun: /done {user_id}"
+        f"👉 Javob berish uchun shu xabarga Reply qiling"
     )
     if MANAGER_CHAT_ID:
         try:
-            await bot.send_message(MANAGER_CHAT_ID, text)
+            kb = handoff_done_keyboard(user_id) if str(user_id).isdigit() else None
+            sent = await bot.send_message(MANAGER_CHAT_ID, text, reply_markup=kb)
+            if str(user_id).isdigit():
+                save_handoff_message(sent.message_id, int(user_id))
         except Exception as e:
             logging.error(f"Handoff xabarini yuborishda xato: {e}")
 
