@@ -627,9 +627,9 @@ async def photo_handler(message: Message, state: FSMContext):
     file = await bot.get_file(message.photo[-1].file_id)
     file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file.file_path}"
 
-    if MANAGER_CHAT_ID:
+    if _live_chat_id():
         await bot.send_photo(
-            MANAGER_CHAT_ID,
+            _live_chat_id(),
             message.photo[-1].file_id,
             caption=f"📸 Yangi rasm — mijoz: @{message.from_user.username or user_id}",
         )
@@ -676,10 +676,10 @@ async def voice_handler(message: Message, state: FSMContext):
     touch_user(user_id, message.from_user.username or "")
 
     # Ovoz faylini operator guruhiga ham yuborish (normal AI rejimida ham)
-    if MANAGER_CHAT_ID:
+    if _live_chat_id():
         try:
             await bot.send_voice(
-                MANAGER_CHAT_ID,
+                _live_chat_id(),
                 message.voice.file_id,
                 caption=f"🎤 Yangi ovoz — mijoz: @{message.from_user.username or user_id}",
             )
