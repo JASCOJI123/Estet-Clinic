@@ -337,6 +337,7 @@ MUHIM CHEKLOVLAR:
 
 KLINIKA MA'LUMOTLARI:
 Nomi: Estet Clinic
+Ish vaqti: har kuni 08:30 — 18:00
 Aloqa: +998 97 308-09-99, +998 97 300-90-19
 Instagram/Taplink: taplink.cc/estetclinic
 
