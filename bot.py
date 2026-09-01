@@ -27,7 +27,8 @@ from google.oauth2.service_account import Credentials
 # ============ SOZLAMALAR (Environment Variables orqali olinadi) ============
 TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 GROQ_API_KEY = os.environ["GROQ_API_KEY"]
-MANAGER_CHAT_ID = os.environ.get("MANAGER_CHAT_ID")
+MANAGER_CHAT_ID = os.environ.get("MANAGER_CHAT_ID")  # Leads guruhi (bron, ro'yxat, chat lead)
+LIVE_CHAT_ID = os.environ.get("LIVE_CHAT_ID")  # Live Chat guruhi (operator suhbati); bo'sh bo'lsa MANAGER_CHAT_ID ishlatiladi
 GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
 GOOGLE_CREDS_FILE = os.environ.get("GOOGLE_CREDS_FILE", "google_creds.json")
 ADMIN_CHAT_IDS = [x.strip() for x in os.environ.get("ADMIN_CHAT_IDS", "").split(",") if x.strip()]
@@ -171,6 +172,16 @@ def get_handoff_user(message_id: int):
     row = c.fetchone()
     conn.close()
     return row[0] if row else None
+
+
+def _live_chat_id() -> str | None:
+    """Live Chat (operator suhbati) uchun guruh ID'si; fallback = MANAGER_CHAT_ID."""
+    return LIVE_CHAT_ID or MANAGER_CHAT_ID
+
+
+def _is_live_chat(chat_id) -> bool:
+    target = _live_chat_id()
+    return bool(target) and str(chat_id) == str(target)
 
 def handoff_done_keyboard(user_id):
     return InlineKeyboardMarkup(inline_keyboard=[[
@@ -527,8 +538,7 @@ async def group_reply_handler(message: Message):
     """Operator guruhda mijoz xabariga oddiy 'Reply' qilsa, bu avtomatik o'sha
     mijozga yuboriladi — /reply buyrug'ini yozish shart emas."""
     is_admin_user = bool(ADMIN_CHAT_IDS) and str(message.from_user.id) in ADMIN_CHAT_IDS
-    is_manager_chat = bool(MANAGER_CHAT_ID) and str(message.chat.id) == str(MANAGER_CHAT_ID)
-    if not (is_admin_user or is_manager_chat):
+    if not (is_admin_user or _is_live_chat(message.chat.id)):
         raise SkipHandler
     if not message.text:
         raise SkipHandler
@@ -554,10 +564,10 @@ async def handoff_relay_handler(message: Message, state: FSMContext):
 
     touch_user(message.from_user.id, message.from_user.username or "")
 
-    if MANAGER_CHAT_ID:
+    if _live_chat_id():
         try:
             await send_handoff_notice(
-                MANAGER_CHAT_ID,
+                _live_chat_id(),
                 f"💬 MIJOZDAN XABAR (operator rejimi)\n"
                 f"👤 @{message.from_user.username or '-'} (ID: {message.from_user.id})\n"
                 f"✉️ {message.text}",
@@ -594,17 +604,17 @@ async def photo_handler(message: Message, state: FSMContext):
 
     # Operator rejimi: rasm operatorga yuboriladi, AI tahlil qilmaydi
     if is_handoff_active(user_id):
-        if MANAGER_CHAT_ID:
+        if _live_chat_id():
             try:
                 sent_photo = await bot.send_photo(
-                    MANAGER_CHAT_ID,
+                    _live_chat_id(),
                     message.photo[-1].file_id,
                     caption=f"📸 Yangi rasm (operator rejimi) — mijoz: @{message.from_user.username or user_id}",
                     reply_markup=handoff_done_keyboard(user_id),
                 )
                 save_handoff_message(sent_photo.message_id, user_id)
                 sent_prompt = await bot.send_message(
-                    MANAGER_CHAT_ID,
+                    _live_chat_id(),
                     "✍️ Javob yozish uchun shu xabarni bosing:",
                     reply_markup=ForceReply(input_field_placeholder="Javobingizni shu yerga yozing..."),
                 )
@@ -705,10 +715,10 @@ async def voice_handler(message: Message, state: FSMContext):
 
     # Operator rejimi: transkripsiya qilingan matn operatorga yuboriladi, AI javob bermaydi
     if is_handoff_active(user_id):
-        if MANAGER_CHAT_ID:
+        if _live_chat_id():
             try:
                 await send_handoff_notice(
-                    MANAGER_CHAT_ID,
+                    _live_chat_id(),
                     f"🎤 OVOZLI XABAR (operator rejimi)\n"
                     f"👤 @{message.from_user.username or '-'} (ID: {user_id})\n"
                     f"🎙 Matn: {text}",
@@ -865,10 +875,9 @@ async def stats_handler(message: Message):
 # ============ ADMIN: MIJOZGA JAVOB YOZISH (/reply) ============
 @dp.message(Command("reply"))
 async def reply_handler(message: Message):
-    # Ruxsat: ADMIN_CHAT_IDS ro'yxatidagi shaxsiy foydalanuvchi YOKI belgilangan guruh (MANAGER_CHAT_ID) ichida
+    # Ruxsat: ADMIN_CHAT_IDS ro'yxatidagi shaxsiy foydalanuvchi YOKI Live Chat guruhida
     is_admin_user = bool(ADMIN_CHAT_IDS) and str(message.from_user.id) in ADMIN_CHAT_IDS
-    is_manager_chat = bool(MANAGER_CHAT_ID) and str(message.chat.id) == str(MANAGER_CHAT_ID)
-    if not (is_admin_user or is_manager_chat):
+    if not (is_admin_user or _is_live_chat(message.chat.id)):
         return
 
     parts = (message.text or "").split(maxsplit=2)
@@ -892,8 +901,7 @@ async def reply_handler(message: Message):
 @dp.message(Command("done"))
 async def done_handler(message: Message):
     is_admin_user = bool(ADMIN_CHAT_IDS) and str(message.from_user.id) in ADMIN_CHAT_IDS
-    is_manager_chat = bool(MANAGER_CHAT_ID) and str(message.chat.id) == str(MANAGER_CHAT_ID)
-    if not (is_admin_user or is_manager_chat):
+    if not (is_admin_user or _is_live_chat(message.chat.id)):
         return
 
     parts = (message.text or "").split(maxsplit=1)
@@ -913,8 +921,7 @@ async def done_handler(message: Message):
 @dp.callback_query(F.data.startswith("donehandoff_"))
 async def done_button_handler(callback):
     is_admin_user = bool(ADMIN_CHAT_IDS) and str(callback.from_user.id) in ADMIN_CHAT_IDS
-    is_manager_chat = bool(MANAGER_CHAT_ID) and str(callback.message.chat.id) == str(MANAGER_CHAT_ID)
-    if not (is_admin_user or is_manager_chat):
+    if not (is_admin_user or _is_live_chat(callback.message.chat.id)):
         await callback.answer("Ruxsat yo'q", show_alert=True)
         return
 
@@ -953,10 +960,12 @@ async def followup_checker():
 
 # ============ KUNLIK HISOBOT + OPERATSIYADAN KEYINGI ESLATMALAR ============
 def admin_targets():
-    """Xabar yuboriladigan adminlar ro'yxati (ADMIN_CHAT_IDS yoki fallback MANAGER_CHAT_ID)."""
+    """Hisobot yuboriladigan joy — faqat ADMIN_CHAT_IDS (shaxsiy chatlar).
+    Guruhlarga hisobot yuborilmaydi. Bo'sh bo'lsa hech narsa yuborilmaydi."""
     if ADMIN_CHAT_IDS:
         return ADMIN_CHAT_IDS
-    return [MANAGER_CHAT_ID] if MANAGER_CHAT_ID else []
+    logging.warning("ADMIN_CHAT_IDS sozlanmagan — kunlik hisobot yuborilmadi.")
+    return []
 
 async def send_daily_report():
     yesterday = (datetime.utcnow() + timedelta(hours=5) - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -1120,10 +1129,10 @@ async def handle_chat_api(request):
         return web.json_response({"error": "message_required"}, status=400)
 
     if webapp_user_id and is_handoff_active(webapp_user_id):
-        if MANAGER_CHAT_ID:
+        if _live_chat_id():
             try:
                 await send_handoff_notice(
-                    MANAGER_CHAT_ID,
+                    _live_chat_id(),
                     f"💬 MIJOZDAN XABAR (Mini App, operator rejimi)\n"
                     f"👤 @{webapp_username} (ID: {webapp_user_id})\n"
                     f"✉️ {user_text}",
@@ -1321,9 +1330,9 @@ async def handle_handoff_api(request):
         f"So'nggi xabari: {last_message or '-'}\n"
         f"Vaqt: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     )
-    if MANAGER_CHAT_ID:
+    if _live_chat_id():
         try:
-            await send_handoff_notice(MANAGER_CHAT_ID, text, user_id)
+            await send_handoff_notice(_live_chat_id(), text, user_id)
         except Exception as e:
             logging.error(f"Handoff xabarini yuborishda xato: {e}")
 
