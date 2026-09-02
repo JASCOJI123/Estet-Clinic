@@ -627,12 +627,8 @@ async def photo_handler(message: Message, state: FSMContext):
     file = await bot.get_file(message.photo[-1].file_id)
     file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file.file_path}"
 
-    if _live_chat_id():
-        await bot.send_photo(
-            _live_chat_id(),
-            message.photo[-1].file_id,
-            caption=f"📸 Yangi rasm — mijoz: @{message.from_user.username or user_id}",
-        )
+    # Normal AI rejimida rasm guruhga YUBORILMAYDI — faqat operator rejimi (handoff)
+    # aktiv bo'lganda rasm operator guruhiga yetkaziladi (yuqorida).
 
     try:
         vision_response = await groq_client.chat.completions.create(
@@ -675,17 +671,8 @@ async def voice_handler(message: Message, state: FSMContext):
 
     touch_user(user_id, message.from_user.username or "")
 
-    # Ovoz faylini operator guruhiga ham yuborish (normal AI rejimida ham)
-    if _live_chat_id():
-        try:
-            await bot.send_voice(
-                _live_chat_id(),
-                message.voice.file_id,
-                caption=f"🎤 Yangi ovoz — mijoz: @{message.from_user.username or user_id}",
-            )
-        except Exception as e:
-            logging.error(f"Ovoz operatorga yuborishda xato: {e}")
-
+    # Normal AI rejimida ovoz guruhga YUBORILMAYDI — faqat operator rejimi (handoff)
+    # aktiv bo'lganda transkripsiya operator guruhiga yetkaziladi (quyida).
     file = await bot.get_file(message.voice.file_id)
     local_path = f"voice_{user_id}.ogg"
     await bot.download_file(file.file_path, local_path)
