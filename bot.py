@@ -62,7 +62,8 @@ def init_db():
             last_message_at TEXT,
             lead_sent INTEGER DEFAULT 0,
             followup_sent INTEGER DEFAULT 0,
-            referred_by INTEGER
+            referred_by INTEGER,
+            lead_form_done INTEGER DEFAULT 0
         )
     """)
     c.execute("""
@@ -102,6 +103,7 @@ def init_db():
         "ALTER TABLE users ADD COLUMN referred_by INTEGER",
         "ALTER TABLE leads ADD COLUMN source TEXT",
         "ALTER TABLE users ADD COLUMN handoff_active INTEGER DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN lead_form_done INTEGER DEFAULT 0",
     ]:
         try:
             c.execute(alter_sql)
@@ -292,6 +294,22 @@ def mark_lead(user_id: int, username: str, info: str, source: str = "chat"):
     conn.commit()
     conn.close()
 
+def get_lead_form_done(user_id: int) -> bool:
+    """Foydalanuvchi kirish formasini to'ldirganini qaytaradi."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT lead_form_done FROM users WHERE user_id=?", (user_id,))
+    row = c.fetchone()
+    conn.close()
+    return bool(row and row[0])
+
+def set_lead_form_done(user_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("UPDATE users SET lead_form_done=1 WHERE user_id=?", (user_id,))
+    conn.commit()
+    conn.close()
+
 def get_stats():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -410,6 +428,78 @@ HANDOFF_VOICE_ACK = {
 class Chat(StatesGroup):
     talking = State()
 
+# Yangi mijozning kirish formasi uchun holatlar
+class LeadForm(StatesGroup):
+    name = State()          # ism
+    surname = State()       # familiya
+    phone = State()         # telefon (contact tugma yoki matn)
+    interest = State()      # qiziqish — inline tugmalar
+    interest_free = State() # "Boshqa" tanlanganda erkin matn
+
+# ============ KIRISH FORMASI MATNLARI ============
+LEAD_FORM_TEXTS = {
+    "intro": {
+        "uz": "Assalomu alaykum! 🌿 Estet Clinic soch ekish konsultatsiya botiga xush kelibsiz.\n\n"
+              "Tezroq yordam berishimiz uchun bir nechta savolga javob bering 👇\n\nIsmingiz nima?",
+        "ru": "Здравствуйте! 🌿 Добро пожаловать в консультационного бота Estet Clinic по пересадке волос.\n\n"
+              "Чтобы быстрее помочь вам, ответьте на несколько вопросов 👇\n\nКак вас зовут?",
+        "en": "Hello! 🌿 Welcome to Estet Clinic hair transplant consultation bot.\n\n"
+              "To help you faster, please answer a few questions 👇\n\nWhat is your first name?",
+    },
+    "surname": {
+        "uz": "Familiyangiz nima?",
+        "ru": "Какая у вас фамилия?",
+        "en": "What is your last name?",
+    },
+    "phone": {
+        "uz": "📞 Telefon raqamingizni yuboring yoki yozib qoldiring. Mutaxassisimiz siz bilan bog'lanadi.",
+        "ru": "📞 Отправьте или напишите ваш номер телефона. Наш специалист свяжется с вами.",
+        "en": "📞 Send or type your phone number. Our specialist will contact you.",
+    },
+    "phone_invalid": {
+        "uz": "⚠️ Telefon raqam noto'g'ri. Iltimos, raqamni to'g'ri yozing (masalan +998 90 123-45-67) yoki pastdagi tugmani bosing.",
+        "ru": "⚠️ Неверный номер телефона. Пожалуйста, введите номер правильно (например +998 90 123-45-67) или нажмите кнопку ниже.",
+        "en": "⚠️ Invalid phone number. Please enter it correctly (e.g. +998 90 123-45-67) or tap the button below.",
+    },
+    "interest": {
+        "uz": "🎯 Sizni nima qiziqtiradi?",
+        "ru": "🎯 Что вас интересует?",
+        "en": "🎯 What are you interested in?",
+    },
+    "interest_free": {
+        "uz": "✍️ Iltimos, nimaga qiziqayotganingizni yozib qoldiring:",
+        "ru": "✍️ Пожалуйста, напишите, что вас интересует:",
+        "en": "✍️ Please type what you're interested in:",
+    },
+    "done": {
+        "uz": "✅ Rahmat! Ma'lumotlaringizni qabul qildik. Mutaxassisimiz tez orada siz bilan bog'lanadi. Endi ilovamizdan foydalanishingiz mumkin 👇",
+        "ru": "✅ Спасибо! Мы получили ваши данные. Наш специалист свяжется с вами в ближайшее время. Теперь вы можете пользоваться нашим приложением 👇",
+        "en": "✅ Thank you! We received your details. Our specialist will contact you soon. Now you can use our app 👇",
+    },
+}
+
+INTEREST_OPTIONS = {
+    "uz": [("💇 Soch ekish", "lf_soch"), ("📅 Bepul konsultatsiya", "lf_konsult"), ("💰 Narxlar", "lf_narx"), ("✍️ Boshqa", "lf_other")],
+    "ru": [("💇 Пересадка волос", "lf_soch"), ("📅 Бесплатная консультация", "lf_konsult"), ("💰 Цены", "lf_narx"), ("✍️ Другое", "lf_other")],
+    "en": [("💇 Hair transplant", "lf_soch"), ("📅 Free consultation", "lf_konsult"), ("💰 Prices", "lf_narx"), ("✍️ Other", "lf_other")],
+}
+
+def lead_form_interest_keyboard(lang: str):
+    buttons = [[InlineKeyboardButton(text=label, callback_data=cb)] for label, cb in INTEREST_OPTIONS.get(lang, INTEREST_OPTIONS["uz"])]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def lead_form_phone_keyboard(lang: str):
+    phone_label = {
+        "uz": "📞 Telefon raqamini yuborish",
+        "ru": "📞 Отправить номер телефона",
+        "en": "📞 Send phone number",
+    }.get(lang, "📞 Telefon raqamini yuborish")
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=phone_label, request_contact=True)]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
 # ============ TUGMALAR ============
 def lang_keyboard():
     return ReplyKeyboardMarkup(
@@ -470,6 +560,22 @@ def webapp_open_keyboard():
         InlineKeyboardButton(text="🌿 Ilovani ochish", web_app=WebAppInfo(url=WEBAPP_URL))
     ]])
 
+async def show_entry_menu(message: Message):
+    """Formadan so'ng yoki forma kerak bo'lmaganda asosiy oqimni ko'rsatadi:
+    webapp tugmasi (agar o'rnatilgan bo'lsa) yoki til tanlash."""
+    kb = webapp_open_keyboard()
+    if kb:
+        await message.answer(
+            "Assalomu alaykum! 🌿 Estet Clinic ilovasiga xush kelibsiz.\n\n"
+            "Paketlar, AI yordamchi va manzil — barchasi bitta ilovada 👇",
+            reply_markup=kb,
+        )
+        return
+    await message.answer(
+        "Qaysi tilda gaplashishni xohlaysiz?\nНа каком языке вам удобно общаться?\nWhich language would you prefer?",
+        reply_markup=lang_keyboard(),
+    )
+
 @dp.message(CommandStart())
 async def start_handler(message: Message, state: FSMContext):
     await state.clear()
@@ -498,19 +604,17 @@ async def start_handler(message: Message, state: FSMContext):
         except Exception as e:
             logging.error(f"Referral signalini yuborishda xato: {e}")
 
-    kb = webapp_open_keyboard()
-    if kb:
+    # Yangi mijoz uchun kirish formasi: ism, familiya, telefon, qiziqish.
+    # Forma bir marta to'ldiriladi (lead_form_done=1), keyin qayta so'ralmaydi.
+    if not get_lead_form_done(message.from_user.id):
+        await state.set_state(LeadForm.name)
         await message.answer(
-            "Assalomu alaykum! 🌿 Estet Clinic ilovasiga xush kelibsiz.\n\n"
-            "Paketlar, AI yordamchi va manzil — barchasi bitta ilovada 👇",
-            reply_markup=kb,
+            LEAD_FORM_TEXTS["intro"]["uz"],
+            reply_markup=ReplyKeyboardRemove(),
         )
         return
 
-    await message.answer(
-        "Qaysi tilda gaplashishni xohlaysiz?\nНа каком языке вам удобно общаться?\nWhich language would you prefer?",
-        reply_markup=lang_keyboard(),
-    )
+    await show_entry_menu(message)
 
 @dp.message(F.text.in_(["🇺🇿 O'zbek", "🇷🇺 Русский", "🇬🇧 English"]))
 async def lang_chosen(message: Message, state: FSMContext):
@@ -553,6 +657,98 @@ async def group_reply_handler(message: Message):
         await message.reply("✅ Yuborildi.")
     except Exception as e:
         await message.reply(f"❌ Xabar yuborilmadi: {e}")
+
+# ============ YANGI MIJOZ KIRISH FORMASI ============
+# Bu handlerlar chat_handler'дан OLDIN ro'yxatdan o'tadi — aks holda chat_handler
+# state filtrisiz bo'lgani uchun forma davomida yozilgan matnni yutib yuboradi.
+@dp.message(LeadForm.name, F.text, ~F.text.startswith("/"))
+async def lead_form_name_handler(message: Message, state: FSMContext):
+    await state.update_data(name=message.text.strip())
+    await state.set_state(LeadForm.surname)
+    await message.answer(LEAD_FORM_TEXTS["surname"]["uz"])
+
+@dp.message(LeadForm.surname, F.text, ~F.text.startswith("/"))
+async def lead_form_surname_handler(message: Message, state: FSMContext):
+    await state.update_data(surname=message.text.strip())
+    await state.set_state(LeadForm.phone)
+    await message.answer(LEAD_FORM_TEXTS["phone"]["uz"], reply_markup=lead_form_phone_keyboard("uz"))
+
+@dp.message(LeadForm.phone, F.contact)
+async def lead_form_phone_contact_handler(message: Message, state: FSMContext):
+    await state.update_data(phone=message.contact.phone_number)
+    await state.set_state(LeadForm.interest)
+    await message.answer(LEAD_FORM_TEXTS["interest"]["uz"], reply_markup=ReplyKeyboardRemove())
+    await message.answer("👇", reply_markup=lead_form_interest_keyboard("uz"))
+
+@dp.message(LeadForm.phone, F.text, ~F.text.startswith("/"))
+async def lead_form_phone_text_handler(message: Message, state: FSMContext):
+    phone = message.text.strip()
+    if len(re.sub(r"\D", "", phone)) < 7:
+        await message.answer(
+            LEAD_FORM_TEXTS["phone_invalid"]["uz"],
+            reply_markup=lead_form_phone_keyboard("uz"),
+        )
+        return
+    await state.update_data(phone=phone)
+    await state.set_state(LeadForm.interest)
+    await message.answer(LEAD_FORM_TEXTS["interest"]["uz"], reply_markup=ReplyKeyboardRemove())
+    await message.answer("👇", reply_markup=lead_form_interest_keyboard("uz"))
+
+@dp.callback_query(LeadForm.interest, F.data.startswith("lf_"))
+async def lead_form_interest_callback(callback, state: FSMContext):
+    interest_map = {
+        "lf_soch": "Soch ekish",
+        "lf_konsult": "Bepul konsultatsiya",
+        "lf_narx": "Narxlar",
+        "lf_other": "__other__",
+    }
+    if callback.data == "lf_other":
+        await state.set_state(LeadForm.interest_free)
+        await callback.message.answer(LEAD_FORM_TEXTS["interest_free"]["uz"])
+    else:
+        await state.update_data(interest=interest_map[callback.data])
+        await complete_lead_form(callback.message, state)
+    await callback.answer()
+
+@dp.message(LeadForm.interest_free, F.text, ~F.text.startswith("/"))
+async def lead_form_interest_free_handler(message: Message, state: FSMContext):
+    await state.update_data(interest=message.text.strip())
+    await complete_lead_form(message, state)
+
+async def complete_lead_form(message: Message, state: FSMContext):
+    """Forma yakuni: lead saqlanadi, Leads guruhiga xabar, Google Sheets, referrer, so'ng asosiy oqim."""
+    data = await state.get_data()
+    lead_info = (
+        f"ism={data.get('name', '')}, familiya={data.get('surname', '')}, "
+        f"telefon={data.get('phone', '')}, qiziqish={data.get('interest', '')}"
+    )
+    user = message.from_user
+
+    if MANAGER_CHAT_ID:
+        try:
+            await bot.send_message(
+                MANAGER_CHAT_ID,
+                f"🆕 YANGI LEAD (botga kirish formasi)\n\n"
+                f"{format_lead_fields(lead_info)}\n"
+                f"💬 Foydalanuvchi: @{user.username or '-'} (ID: {user.id})\n\n"
+                f"🕒 {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            )
+        except Exception as e:
+            logging.error(f"Lead forma xabari yuborishda xato: {e}")
+
+    mark_lead(user.id, user.username or "", lead_info, source="telegram-start")
+    set_lead_form_done(user.id)
+    await notify_referrer_if_any(user.id)
+    append_lead_to_sheet([
+        datetime.now().strftime("%Y-%m-%d %H:%M"),
+        str(user.id),
+        user.username or "",
+        lead_info,
+    ])
+
+    await state.clear()
+    await message.answer(LEAD_FORM_TEXTS["done"]["uz"], reply_markup=ReplyKeyboardRemove())
+    await show_entry_menu(message)
 
 # ============ OPERATOR REJIMI: MIJOZ XABARINI OPERATORGA UZATISH ============
 @dp.message(F.text, ~F.text.startswith("/"))
@@ -798,14 +994,15 @@ async def notify_referrer_if_any(user_id: int):
             logging.error(f"Referral admin xabarida xato: {e}")
 
 FIELD_EMOJIS = {
-    "ism": "👤", "F.I.Sh": "👤", "telefon": "📞", "tug'ilgan sana": "🎂",
-    "manzil": "📍", "pasport": "🪪", "paket": "📦", "amaliyot sanasi": "🗓",
-    "eslatma": "📝", "sana": "📆", "vaqt": "⏰",
+    "ism": "👤", "F.I.Sh": "👤", "telefon": "📞", "familiya": "👤", "qiziqish": "🎯",
+    "tug'ilgan sana": "🎂", "manzil": "📍", "pasport": "🪪", "paket": "📦",
+    "amaliyot sanasi": "🗓", "eslatma": "📝", "sana": "📆", "vaqt": "⏰",
 }
 FIELD_LABELS = {
-    "ism": "Ism", "F.I.Sh": "F.I.Sh", "telefon": "Telefon", "tug'ilgan sana": "Tug'ilgan sana",
-    "manzil": "Manzil", "pasport": "Pasport", "paket": "Paket", "amaliyot sanasi": "Amaliyot sanasi",
-    "eslatma": "Eslatma", "sana": "Sana", "vaqt": "Vaqt",
+    "ism": "Ism", "F.I.Sh": "F.I.Sh", "telefon": "Telefon", "familiya": "Familiya", "qiziqish": "Qiziqishi",
+    "tug'ilgan sana": "Tug'ilgan sana", "manzil": "Manzil", "pasport": "Pasport",
+    "paket": "Paket", "amaliyot sanasi": "Amaliyot sanasi", "eslatma": "Eslatma",
+    "sana": "Sana", "vaqt": "Vaqt",
 }
 
 def format_lead_fields(info: str) -> str:
