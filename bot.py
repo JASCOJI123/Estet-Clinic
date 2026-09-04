@@ -21,16 +21,12 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from groq import AsyncGroq
 from aiohttp import web
-import gspread
-from google.oauth2.service_account import Credentials
 
 # ============ SOZLAMALAR (Environment Variables orqali olinadi) ============
 TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 GROQ_API_KEY = os.environ["GROQ_API_KEY"]
 MANAGER_CHAT_ID = os.environ.get("MANAGER_CHAT_ID")  # Leads guruhi (bron, ro'yxat, chat lead)
 LIVE_CHAT_ID = os.environ.get("LIVE_CHAT_ID")  # Live Chat guruhi (operator suhbati); bo'sh bo'lsa MANAGER_CHAT_ID ishlatiladi
-GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
-GOOGLE_CREDS_FILE = os.environ.get("GOOGLE_CREDS_FILE", "google_creds.json")
 ADMIN_CHAT_IDS = [x.strip() for x in os.environ.get("ADMIN_CHAT_IDS", "").split(",") if x.strip()]
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "")  # Mini App'ning HTTPS manzili (GitHub Pages va h.k.)
 ADMIN_PANEL_PASSWORD = os.environ.get("ADMIN_PANEL_PASSWORD", "")  # Mini App'dagi Ro'yxat bo'limi uchun parol
@@ -92,6 +88,17 @@ def init_db():
         )
     """)
     c.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)")
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS bookings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            day TEXT NOT NULL,
+            time TEXT NOT NULL,
+            name TEXT,
+            phone TEXT,
+            created_at TEXT,
+            UNIQUE(day, time)
+        )
+    """)
     c.execute("""
         CREATE TABLE IF NOT EXISTS handoff_messages (
             message_id INTEGER PRIMARY KEY,
@@ -225,6 +232,32 @@ def save_registration(name, phone, birth, address, passport, package, note, oper
     """, (name, phone, birth, address, passport, package, note, operation_date, datetime.now().isoformat()))
     conn.commit()
     conn.close()
+
+def get_booked_slots(day: str):
+    """Berilgan kun (YYYY-MM-DD) uchun band qilingan barcha vaqtlarni qaytaradi."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT time FROM bookings WHERE day=?", (day,))
+    rows = c.fetchall()
+    conn.close()
+    return [r[0] for r in rows]
+
+def try_create_booking(day: str, time_slot: str, name: str, phone: str) -> bool:
+    """Kun+vaqt uchun joyni band qiladi. Bu joy allaqachon band bo'lsa False qaytaradi
+    (UNIQUE(day, time) cheklovi orqali — bir vaqtda kelgan ikkita so'rovda ham xavfsiz)."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute(
+            "INSERT INTO bookings (day, time, name, phone, created_at) VALUES (?,?,?,?,?)",
+            (day, time_slot, name, phone, datetime.now().isoformat()),
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
 
 def get_operations_due_today():
     """Amaliyotdan 3, 7 yoki 30 kun o'tgan mijozlarni topadi (kuzatuv qo'ng'irog'i uchun)."""
@@ -716,13 +749,22 @@ async def lead_form_interest_free_handler(message: Message, state: FSMContext):
     await complete_lead_form(message, state)
 
 async def complete_lead_form(message: Message, state: FSMContext):
-    """Forma yakuni: lead saqlanadi, Leads guruhiga xabar, Google Sheets, referrer, so'ng asosiy oqim."""
+    """Forma yakuni: lead saqlanadi, Leads guruhiga xabar, referrer, so'ng asosiy oqim."""
+    user = message.from_user
+
+    # Xavfsizlik uchun qo'shimcha tekshiruv: agar bu foydalanuvchi allaqachon
+    # forma to'ldirib bo'lgan bo'lsa (masalan formani ikki marta yuborib yuborsa),
+    # uni qayta lead sifatida yubormaymiz — bitta odam ikki marta lead bo'lmasin.
+    if get_lead_form_done(user.id):
+        await state.clear()
+        await show_entry_menu(message)
+        return
+
     data = await state.get_data()
     lead_info = (
         f"ism={data.get('name', '')}, familiya={data.get('surname', '')}, "
         f"telefon={data.get('phone', '')}, qiziqish={data.get('interest', '')}"
     )
-    user = message.from_user
 
     if MANAGER_CHAT_ID:
         try:
@@ -739,12 +781,6 @@ async def complete_lead_form(message: Message, state: FSMContext):
     mark_lead(user.id, user.username or "", lead_info, source="telegram-start")
     set_lead_form_done(user.id)
     await notify_referrer_if_any(user.id)
-    append_lead_to_sheet([
-        datetime.now().strftime("%Y-%m-%d %H:%M"),
-        str(user.id),
-        user.username or "",
-        lead_info,
-    ])
 
     await state.clear()
     await message.answer(LEAD_FORM_TEXTS["done"]["uz"], reply_markup=ReplyKeyboardRemove())
@@ -867,8 +903,30 @@ async def voice_handler(message: Message, state: FSMContext):
 
     touch_user(user_id, message.from_user.username or "")
 
-    # Normal AI rejimida ovoz guruhga YUBORILMAYDI — faqat operator rejimi (handoff)
-    # aktiv bo'lganda transkripsiya operator guruhiga yetkaziladi (quyida).
+    # Operator rejimi: original ovozli xabar (fayl) to'g'ridan-to'g'ri operatorga
+    # yuboriladi — transkripsiya qilinmaydi, chunki operator ovozni o'zi tinglaydi.
+    if is_handoff_active(user_id):
+        if _live_chat_id():
+            try:
+                sent_voice = await bot.send_voice(
+                    _live_chat_id(),
+                    message.voice.file_id,
+                    caption=f"🎤 Yangi ovozli xabar (operator rejimi) — mijoz: @{message.from_user.username or user_id}",
+                    reply_markup=handoff_done_keyboard(user_id),
+                )
+                save_handoff_message(sent_voice.message_id, user_id)
+                sent_prompt = await bot.send_message(
+                    _live_chat_id(),
+                    "✍️ Javob yozish uchun shu xabarni bosing:",
+                    reply_markup=ForceReply(input_field_placeholder="Javobingizni shu yerga yozing..."),
+                )
+                save_handoff_message(sent_prompt.message_id, user_id)
+            except Exception as e:
+                logging.error(f"Handoff ovoz xatosi: {e}")
+        await message.answer(HANDOFF_VOICE_ACK.get(lang, HANDOFF_VOICE_ACK["uz"]))
+        return
+
+    # Normal AI rejimida ovoz matnga aylantirilib AI'ga yuboriladi (guruhga yuborilmaydi)
     file = await bot.get_file(message.voice.file_id)
     local_path = f"voice_{user_id}.ogg"
     await bot.download_file(file.file_path, local_path)
@@ -894,22 +952,6 @@ async def voice_handler(message: Message, state: FSMContext):
             "en": "Sorry, I couldn't understand the voice message. Please type it instead.",
         }[lang]
         await message.answer(error_msg)
-        return
-
-    # Operator rejimi: transkripsiya qilingan matn operatorga yuboriladi, AI javob bermaydi
-    if is_handoff_active(user_id):
-        if _live_chat_id():
-            try:
-                await send_handoff_notice(
-                    _live_chat_id(),
-                    f"🎤 OVOZLI XABAR (operator rejimi)\n"
-                    f"👤 @{message.from_user.username or '-'} (ID: {user_id})\n"
-                    f"🎙 Matn: {text}",
-                    user_id,
-                )
-            except Exception as e:
-                logging.error(f"Handoff ovoz xatosi: {e}")
-        await message.answer(HANDOFF_VOICE_ACK.get(lang, HANDOFF_VOICE_ACK["uz"]))
         return
 
     history.append({"role": "user", "content": text})
@@ -950,26 +992,7 @@ async def run_llm_and_reply(message: Message, state: FSMContext, history: list, 
 
     await message.answer(reply_text)
 
-# ============ GOOGLE SHEETS YORDAMCHISI ============
-def append_lead_to_sheet(row: list):
-    """Har qanday lead manbaidan (chat/bron/ro'yxat) Google jadvalga qator qo'shadi.
-    GOOGLE_CREDS_JSON (Render uchun, xavfsizroq) yoki GOOGLE_CREDS_FILE (lokal fayl) ishlatiladi."""
-    if not GOOGLE_SHEET_ID:
-        return
-    try:
-        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-        creds_json = os.environ.get("GOOGLE_CREDS_JSON")
-        if creds_json:
-            creds = Credentials.from_service_account_info(json.loads(creds_json), scopes=scopes)
-        else:
-            creds = Credentials.from_service_account_file(GOOGLE_CREDS_FILE, scopes=scopes)
-        gc = gspread.authorize(creds)
-        sheet = gc.open_by_key(GOOGLE_SHEET_ID).sheet1
-        sheet.append_row(row)
-    except Exception as e:
-        logging.error(f"Google Sheets xatosi: {e}")
-
-# ============ OPERATORGA SIGNAL + GOOGLE SHEETS ============
+# ============ OPERATORGA SIGNAL ============
 async def notify_referrer_if_any(user_id: int):
     """Agar bu mijoz kimningdir taklifi orqali kelgan bo'lsa, taklif qiluvchiga va adminga xabar beradi."""
     referrer_id = get_referrer(user_id)
@@ -1032,13 +1055,6 @@ async def notify_manager(message: Message, lead_info: str):
 
     mark_lead(user.id, user.username or "", lead_info, source="telegram-chat")
     await notify_referrer_if_any(user.id)
-
-    append_lead_to_sheet([
-        datetime.now().strftime("%Y-%m-%d %H:%M"),
-        str(user.id),
-        user.username or "-",
-        lead_info,
-    ])
 
 # ============ ADMIN: STATISTIKA ============
 @dp.message(Command("stats"))
@@ -1363,11 +1379,6 @@ async def handle_chat_api(request):
                     logging.error(f"Mini App lead xabarini yuborishda xato: {e}")
 
             mark_lead(webapp_user_id, webapp_username, lead_info, source="webapp-chat")
-
-            append_lead_to_sheet([
-                datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "webapp", webapp_username, lead_info,
-            ])
         else:
             logging.warning(f"Bo'sh/noto'g'ri LEAD_CAPTURED e'tiborga olinmadi (webapp): {candidate_lead_info}")
 
@@ -1387,13 +1398,18 @@ async def handle_book_api(request):
 
     name = (body.get("name") or "").strip()
     phone = (body.get("phone") or "").strip()
-    day = (body.get("day") or "").strip()
+    day = (body.get("day") or "").strip()  # ISO format (YYYY-MM-DD) — joy bandligini tekshirish uchun kalit
+    day_label = (body.get("day_label") or day).strip()  # foydalanuvchiga ko'rsatiladigan sana matni
     time_slot = (body.get("time") or "").strip()
 
     if not name or not phone or not day or not time_slot:
         return web.json_response({"error": "missing_fields"}, status=400)
 
-    info = f"ism={name}, telefon={phone}, sana={day}, vaqt={time_slot}"
+    # Shu kun+vaqt uchun joy bandligini tekshirish (bir vaqtda ikkita mijoz bir joyga yozilib qolmasin)
+    if not try_create_booking(day, time_slot, name, phone):
+        return web.json_response({"error": "slot_taken"}, status=409)
+
+    info = f"ism={name}, telefon={phone}, sana={day_label}, vaqt={time_slot}"
 
     if MANAGER_CHAT_ID:
         try:
@@ -1408,12 +1424,15 @@ async def handle_book_api(request):
 
     mark_lead(uid, name, info, source="webapp-booking")
 
-    append_lead_to_sheet([
-        datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "webapp-booking", name, info,
-    ])
-
     return web.json_response({"success": True})
+
+async def handle_booked_slots_api(request):
+    """Berilgan kun (YYYY-MM-DD) uchun band qilingan vaqtlarni qaytaradi —
+    Mini App bron sahifasida qaysi vaqt band, qaysi bo'sh ekanini ko'rsatish uchun."""
+    day = request.query.get("day", "").strip()
+    if not day:
+        return web.json_response({"error": "day_required"}, status=400)
+    return web.json_response({"booked": get_booked_slots(day)})
 
 async def handle_register_api(request):
     """Mini App'ning 'Ro'yxat' tabidan kelgan to'liq mijoz ma'lumoti."""
@@ -1461,11 +1480,6 @@ async def handle_register_api(request):
 
     mark_lead(uid, name, info, source="webapp-register")
     save_registration(name, phone, birth, address, passport, package, note, operation_date)
-
-    append_lead_to_sheet([
-        datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "webapp-register", name, info,
-    ])
 
     return web.json_response({"success": True})
 
@@ -1529,6 +1543,7 @@ async def start_web_server():
     app.router.add_route("OPTIONS", "/api/chat", handle_health)
     app.router.add_post("/api/book", handle_book_api)
     app.router.add_route("OPTIONS", "/api/book", handle_health)
+    app.router.add_get("/api/booked-slots", handle_booked_slots_api)
     app.router.add_post("/api/register", handle_register_api)
     app.router.add_route("OPTIONS", "/api/register", handle_health)
     app.router.add_post("/api/admin-login", handle_admin_login_api)

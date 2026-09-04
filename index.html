@@ -164,6 +164,7 @@
   .slot-grid{display:none;grid-template-columns:1fr 1fr 1fr;gap:10px;}
   .slot-btn{padding:14px 0;text-align:center;border-radius:14px;border:1.5px solid var(--line);font-size:13.5px;font-weight:700;cursor:pointer;}
   .slot-btn.is-active{background:var(--forest);color:#fff;border-color:var(--forest);}
+  .slot-btn.is-booked{opacity:.4;pointer-events:none;text-decoration:line-through;background:var(--bg-soft);}
   .book-input{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;font-family:'Manrope',sans-serif;font-size:14px;outline:none;}
   .book-input:focus{border-color:var(--forest);}
   .book-summary{background:var(--bg-soft);border-radius:14px;padding:14px 16px;font-size:13px;margin-top:18px;display:flex;justify-content:space-between;}
@@ -651,6 +652,7 @@
       bookSubmitBtn:"Bron qilish", bookSuccessTitle:"Bron qabul qilindi!", bookSuccessDesc:"Operatorimiz tez orada siz bilan bog'lanib, vaqtni tasdiqlaydi.", bookAgainBtn:"Yana bron qilish",
       bookFillFields:"Iltimos, ism va telefon raqamingizni kiriting.", bookGenericError:"Xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.",
       bookNetworkError:"Internet aloqasi bilan muammo. +998 97 308-09-99 raqamiga qo'ng'iroq qiling.",
+      bookSlotTaken:"Kechirasiz, bu vaqt band qilindi. Iltimos boshqa vaqtni tanlang.",
       todayLabel:"Bugun", tomorrowLabel:"Ertaga",
       days:["Yak","Dush","Sesh","Chor","Pay","Jum","Shan"], months:["yan","fev","mar","apr","may","iyun","iyul","avg","sen","okt","noy","dek"],
     },
@@ -695,6 +697,7 @@
       bookSubmitBtn:"Записаться", bookSuccessTitle:"Запись принята!", bookSuccessDesc:"Наш оператор скоро свяжется с вами для подтверждения времени.", bookAgainBtn:"Записаться ещё",
       bookFillFields:"Пожалуйста, введите имя и номер телефона.", bookGenericError:"Произошла ошибка. Попробуйте ещё раз.",
       bookNetworkError:"Проблема с интернет-соединением. Позвоните по номеру +998 97 308-09-99.",
+      bookSlotTaken:"Извините, это время уже занято. Пожалуйста, выберите другое время.",
       todayLabel:"Сегодня", tomorrowLabel:"Завтра",
       days:["Вс","Пн","Вт","Ср","Чт","Пт","Сб"], months:["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"],
     },
@@ -739,6 +742,7 @@
       bookSubmitBtn:"Randevu al", bookSuccessTitle:"Randevu alındı!", bookSuccessDesc:"Operatörümüz kısa süre içinde sizinle iletişime geçip saati onaylayacak.", bookAgainBtn:"Tekrar randevu al",
       bookFillFields:"Lütfen adınızı ve telefon numaranızı girin.", bookGenericError:"Bir hata oluştu. Lütfen tekrar deneyin.",
       bookNetworkError:"İnternet bağlantı sorunu. +998 97 308-09-99 numarasını arayın.",
+      bookSlotTaken:"Üzgünüz, bu saat dolu. Lütfen başka bir saat seçin.",
       todayLabel:"Bugün", tomorrowLabel:"Yarın",
       days:["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"], months:["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"],
     },
@@ -783,6 +787,7 @@
       bookSubmitBtn:"Бронь кардан", bookSuccessTitle:"Бронь қабул карда шуд!", bookSuccessDesc:"Оператори мо ба наздикӣ бо шумо тамос гирифта, вақтро тасдиқ мекунад.", bookAgainBtn:"Боз брон кардан",
       bookFillFields:"Лутфан, ном ва рақами телефони худро ворид кунед.", bookGenericError:"Хатогӣ рух дод. Лутфан аз нав кӯшиш кунед.",
       bookNetworkError:"Мушкилот бо пайвасти интернет. Ба рақами +998 97 308-09-99 занг занед.",
+      bookSlotTaken:"Бубахшед, ин вақт аллакай банд аст. Лутфан вақти дигарро интихоб кунед.",
       todayLabel:"Имрӯз", tomorrowLabel:"Пагоҳ",
       days:["Яшб","Дшб","Сшб","Чшб","Пшб","Ҷум","Шнб"], months:["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"],
     },
@@ -815,7 +820,7 @@
       el.classList.toggle('is-selected', el.dataset.lang === lang);
     });
     // Bron kunlarini qayta chizish (til bo'yicha kun/oy nomlari)
-    selectedDayLabel = null; selectedTime = null;
+    selectedDayLabel = null; selectedTime = null; selectedDayISO = null;
     const daySelectorEl = document.getElementById('daySelector');
     if (daySelectorEl) daySelectorEl.innerHTML = '';
     const slotGridEl = document.getElementById('slotGrid');
@@ -1104,7 +1109,7 @@
 
   // ---------- BRON QILISH LOGIKASI ----------
   const TIME_SLOTS = ["09:00","11:00","13:00","15:00","17:00"];
-  let selectedDayLabel = null, selectedTime = null;
+  let selectedDayLabel = null, selectedTime = null, selectedDayISO = null;
 
   function buildDaySelector(){
     const holder = document.getElementById('daySelector');
@@ -1120,29 +1125,43 @@
       chip.className = 'day-chip';
       chip.textContent = shortLabel + " " + d.getDate();
       chip.dataset.value = `${d.getDate()}-${monthNames[d.getMonth()]}`;
+      chip.dataset.iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       chip.onclick = () => selectDay(chip);
       holder.appendChild(chip);
     }
   }
 
-  function selectDay(chip){
+  async function selectDay(chip){
     document.querySelectorAll('.day-chip').forEach(c=>c.classList.remove('is-active'));
     chip.classList.add('is-active');
     selectedDayLabel = chip.textContent;
+    selectedDayISO = chip.dataset.iso;
     selectedTime = null;
-    buildSlotGrid();
     document.getElementById('bookingForm').style.display = 'none';
+    await buildSlotGrid();
   }
 
-  function buildSlotGrid(){
+  async function fetchBookedSlots(dayISO){
+    try {
+      const res = await fetch(API_BASE + '/api/booked-slots?day=' + encodeURIComponent(dayISO));
+      const data = await res.json();
+      return data.booked || [];
+    } catch(err){
+      return []; // internet muammosi bo'lsa, band joylarsiz ko'rsatiladi (backend baribir qayta tekshiradi)
+    }
+  }
+
+  async function buildSlotGrid(){
     const grid = document.getElementById('slotGrid');
     grid.style.display = 'grid';
     grid.innerHTML = '';
+    const bookedTimes = await fetchBookedSlots(selectedDayISO);
     TIME_SLOTS.forEach(t=>{
+      const isBooked = bookedTimes.includes(t);
       const btn = document.createElement('div');
-      btn.className = 'slot-btn';
+      btn.className = 'slot-btn' + (isBooked ? ' is-booked' : '');
       btn.textContent = t;
-      btn.onclick = () => selectTime(btn, t);
+      if (!isBooked) btn.onclick = () => selectTime(btn, t);
       grid.appendChild(btn);
     });
   }
@@ -1170,12 +1189,18 @@
       const res = await fetch(API_BASE + '/api/book', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ name, phone, day: selectedDayLabel, time: selectedTime, init_data: apiInitData() })
+        body: JSON.stringify({ name, phone, day: selectedDayISO, day_label: selectedDayLabel, time: selectedTime, init_data: apiInitData() })
       });
       const data = await res.json();
       if (data.success){
         document.getElementById('bookingStep1').style.display = 'none';
         document.getElementById('bookingSuccess').style.display = 'flex';
+      } else if (data.error === 'slot_taken'){
+        addBubbleAlert(T('bookSlotTaken'));
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        await buildSlotGrid(); // band joylarni yangilab ko'rsatish
+        document.getElementById('bookingForm').style.display = 'none';
       } else {
         addBubbleAlert(T('bookGenericError'));
         btn.disabled = false;
@@ -1248,7 +1273,7 @@
       success.style.display = 'none';
       document.getElementById('bookName').value = '';
       document.getElementById('bookPhone').value = '';
-      selectedDayLabel = null; selectedTime = null;
+      selectedDayLabel = null; selectedTime = null; selectedDayISO = null;
       document.querySelectorAll('.day-chip').forEach(c=>c.classList.remove('is-active'));
       const slotGrid = document.getElementById('slotGrid');
       if (slotGrid){ slotGrid.innerHTML=''; slotGrid.style.display='none'; }
