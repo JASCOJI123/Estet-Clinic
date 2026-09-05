@@ -457,6 +457,51 @@ HANDOFF_VOICE_ACK = {
     "en": "🎤 Your voice message has been sent to the operator. The operator will reply in the main chat — please keep an eye on it.",
 }
 
+HANDOFF_START_MSG = {
+    "uz": "🙋 Sizni operatorimizga ulayapmiz. Bir necha daqiqada javob berishadi — shu yerda kutib turing.",
+    "ru": "🙋 Соединяем вас с оператором. В течение нескольких минут вам ответят — пожалуйста, подождите здесь.",
+    "en": "🙋 Connecting you with our operator. Someone will reply here shortly — please wait.",
+}
+
+# Foydalanuvchi AI bilan suhbat chog'ida turli iboralar bilan ("operator bilan bog'la",
+# "admin bilan ulang", "odam bilan gaplashtiring" va h.k.) jonli operatorni so'rashi mumkin.
+# Bu so'zlar matnda uchrasa, AI javob bermay, suhbat to'g'ridan-to'g'ri operatorga ulanadi.
+HANDOFF_REQUEST_KEYWORDS = [
+    # o'zbekcha
+    "operator", "operatorga", "operator bilan",
+    "administrator", "admin bilan", "adminga",
+    "odam bilan", "odam bilan gaplash", "odamga ulang", "jonli odam", "haqiqiy odam",
+    "inson bilan", "inson bilan gaplash",
+    "menejer", "menejer bilan",
+    # ruscha
+    "оператор", "администратор", "живой человек", "человека", "с человеком",
+    "менеджер", "соедините", "соедини", "оператору", "оператором",
+    # inglizcha
+    "human", "real person", "live agent", "talk to someone", "connect me to",
+]
+
+def is_handoff_request(text: str) -> bool:
+    """Foydalanuvchi matnida operator/admin/odam bilan bog'lanish so'ralganini aniqlaydi."""
+    t = (text or "").lower()
+    return any(kw in t for kw in HANDOFF_REQUEST_KEYWORDS)
+
+async def connect_to_live_operator(message: Message, lang: str, note: str = ""):
+    """AI suhbatidan mijozni jonli operator rejimiga o'tkazadi va operator guruhiga signal beradi."""
+    user_id = message.from_user.id
+    set_handoff(user_id, True)
+    if _live_chat_id():
+        try:
+            await send_handoff_notice(
+                _live_chat_id(),
+                f"🙋 MIJOZ OPERATOR BILAN BOG'LANISHNI SO'RADI (AI suhbatidan)\n"
+                f"👤 @{message.from_user.username or '-'} (ID: {user_id})\n"
+                f"✉️ So'nggi xabari: {note or message.text}",
+                user_id,
+            )
+        except Exception as e:
+            logging.error(f"Avto-handoff xatosi: {e}")
+    await message.answer(HANDOFF_START_MSG.get(lang, HANDOFF_START_MSG["uz"]))
+
 # ============ HOLAT (FSM) ============
 class Chat(StatesGroup):
     talking = State()
@@ -821,6 +866,12 @@ async def chat_handler(message: Message, state: FSMContext):
 
     touch_user(message.from_user.id, message.from_user.username or "")
 
+    # Mijoz "operator bilan bog'la", "admin bilan ulang", "odam bilan gaplashtiring"
+    # kabi iboralar yozsa — AI javob bermaydi, suhbat to'g'ridan-to'g'ri jonli operatorga ulanadi.
+    if is_handoff_request(message.text):
+        await connect_to_live_operator(message, lang)
+        return
+
     history.append({"role": "user", "content": message.text})
     await run_llm_and_reply(message, state, history, lang)
 
@@ -952,6 +1003,12 @@ async def voice_handler(message: Message, state: FSMContext):
             "en": "Sorry, I couldn't understand the voice message. Please type it instead.",
         }[lang]
         await message.answer(error_msg)
+        return
+
+    # Ovozli xabar matnga aylantirilgach ham operator so'rovi tekshiriladi
+    # ("...operator bilan bog'lang" deb OVOZ orqali aytilishi ham mumkin).
+    if is_handoff_request(text):
+        await connect_to_live_operator(message, lang, note=f"(ovozli xabar) {text}")
         return
 
     history.append({"role": "user", "content": text})
