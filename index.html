@@ -175,7 +175,7 @@
   select.book-input{appearance:none;background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23767D78" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 14px center;background-size:16px;}
   textarea.book-input{resize:none;min-height:80px;font-family:'Manrope',sans-serif;line-height:1.5;}
 
-  /* ---------- VAKANSIYA ---------- */
+  /* ---------- EMPTY STATE ---------- */
   .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:90px 30px 40px;}
   .empty-state .icon{width:72px;height:72px;border-radius:50%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;margin-bottom:20px;}
   .empty-state .icon svg{width:32px;height:32px;color:var(--forest);}
@@ -497,18 +497,6 @@
   </div>
 </div>
 
-<!-- ================= TAB 3: VAKANSIYA ================= -->
-<div class="page" id="page-jobs">
-  <div class="wrap">
-    <nav class="nav"><div class="brand"><span class="dot"></span>ESTET CLINIC</div><div class="nav-lang" onclick="openLangModal()">UZ</div></nav>
-    <div class="empty-state">
-      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
-      <h3 data-i18n="jobsTitle">Vakansiyalar tez kunda</h3>
-      <p data-i18n="jobsDesc">Hozircha ochiq ish o'rinlari yo'q. Yangi vakansiyalar shu yerda e'lon qilinadi — kuzatib boring!</p>
-    </div>
-  </div>
-</div>
-
 <!-- ================= TAB 4: MANZIL ================= -->
 <div class="page" id="page-location">
   <div class="wrap">
@@ -558,10 +546,6 @@
   <button class="tab-btn" data-tab="register" onclick="switchTab('register')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11v6M19 14h6"/></svg>
     <span data-i18n="tabRegister">Ro'yxat</span>
-  </button>
-  <button class="tab-btn" data-tab="jobs" onclick="switchTab('jobs')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-    <span data-i18n="tabJobs">Vakansiya</span>
   </button>
   <button class="tab-btn" data-tab="location" onclick="switchTab('location')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -631,7 +615,7 @@
       step3Title:"Operatsiya", step3Desc:"Zamonaviy usulda, og'riqsiz va bir kunlik jarayon.",
       step4Title:"Kuzatuv va natija", step4Desc:"1 yil davomida bepul konsultatsiya va umrlik kafolat.",
       contactTitle:"Bepul konsultatsiyaga yoziling", contactDesc:"Mutaxassisimiz siz bilan bog'lanib, barcha savollaringizga javob beradi.", contactBookBtn:"Bron qilish",
-      tabHome:"Bosh sahifa", tabBooking:"Bron", tabAI:"AI Yordamchi", tabRegister:"Ro'yxat", tabJobs:"Vakansiya", tabLocation:"Manzil",
+      tabHome:"Bosh sahifa", tabBooking:"Bron", tabAI:"AI Yordamchi", tabRegister:"Ro'yxat", tabLocation:"Manzil",
       aiHeaderTitle:"🤖 AI Yordamchi", aiHeaderDesc:"Savolingizni yozing — soch ekish bo'yicha maslahat beraman",
       aiInitMsg:"Assalomu alaykum! 🌿 Men Estet Clinic'ning AI yordamchisiman. Soch ekish bo'yicha savollaringizga javob beraman. Sizga qanday yordam bera olaman?",
       chipPrices:"💰 Narxlar", chipConsult:"📅 Konsultatsiya", chipPain:"💉 Og'riqli bo'ladimi?", chipHandoff:"👤 Odam bilan gaplashish",
@@ -642,7 +626,6 @@
       chatPlaceholder:"Xabar yozing...", chatErrorGeneric:"Kechirasiz, xatolik yuz berdi. Qaytadan urinib ko'ring.",
       chatErrorNetwork:"Internet aloqasi bilan muammo. Iltimos qaytadan urinib ko'ring yoki +998 97 308-09-99 raqamiga qo'ng'iroq qiling.",
       askPackageTemplate:"{name} paketi haqida batafsil aytib bering",
-      jobsTitle:"Vakansiyalar tez kunda", jobsDesc:"Hozircha ochiq ish o'rinlari yo'q. Yangi vakansiyalar shu yerda e'lon qilinadi — kuzatib boring!",
       locEyebrow:"Manzil", locTitle:"Buxoro, Oqmasjid ko'chasi 8/5", locDesc:"Klinika har kuni 08:30 — 18:00 da ishlaydi. Boshqa shahardan kelayotgan mijozlar uchun yaqin mehmonxonalar ro'yxati quyida.",
       locOpenRoute:"Yo'l xaritasini ochish", hotelsEyebrow:"Yaqin mehmonxonalar", hotelsTitle:"Klinikaga yaqin turar joylar",
       hotelNote:"Narxlar mavsum va xonalar bandligiga qarab o'zgaradi — aniq narxni telefon orqali so'rashingiz mumkin.",
@@ -675,7 +658,7 @@
       step3Title:"Операция", step3Desc:"Современным методом, безболезненно, в течение одного дня.",
       step4Title:"Наблюдение и результат", step4Desc:"Год бесплатных консультаций и пожизненная гарантия.",
       contactTitle:"Запишитесь на бесплатную консультацию", contactDesc:"Наш специалист свяжется с вами и ответит на все вопросы.", contactBookBtn:"Записаться",
-      tabHome:"Главная", tabBooking:"Запись", tabAI:"AI-помощник", tabRegister:"Регистрация", tabJobs:"Вакансии", tabLocation:"Адрес",
+      tabHome:"Главная", tabBooking:"Запись", tabAI:"AI-помощник", tabRegister:"Регистрация", tabLocation:"Адрес",
       aiHeaderTitle:"🤖 AI-помощник", aiHeaderDesc:"Напишите ваш вопрос — я проконсультирую по пересадке волос",
       aiInitMsg:"Здравствуйте! 🌿 Я AI-помощник Estet Clinic. Отвечу на ваши вопросы о пересадке волос. Чем могу помочь?",
       chipPrices:"💰 Цены", chipConsult:"📅 Консультация", chipPain:"💉 Будет больно?", chipHandoff:"👤 Поговорить с человеком",
@@ -686,7 +669,6 @@
       chatPlaceholder:"Напишите сообщение...", chatErrorGeneric:"Извините, произошла ошибка. Попробуйте ещё раз.",
       chatErrorNetwork:"Проблема с подключением к интернету. Попробуйте ещё раз или позвоните по номеру +998 97 308-09-99.",
       askPackageTemplate:"Расскажите подробнее о пакете {name}",
-      jobsTitle:"Вакансии скоро", jobsDesc:"Сейчас открытых вакансий нет. Новые объявления появятся здесь — следите за обновлениями!",
       locEyebrow:"Адрес", locTitle:"Бухара, улица Окмасжид 8/5", locDesc:"Клиника работает ежедневно с 08:30 до 18:00. Список ближайших отелей для гостей из других городов — ниже.",
       locOpenRoute:"Открыть маршрут", hotelsEyebrow:"Ближайшие отели", hotelsTitle:"Места проживания рядом с клиникой",
       hotelNote:"Цены меняются в зависимости от сезона и загруженности — точную цену уточняйте по телефону.",
@@ -719,7 +701,7 @@
       step3Title:"Operasyon", step3Desc:"Modern yöntemle, ağrısız ve tek günlük işlem.",
       step4Title:"Takip ve sonuç", step4Desc:"1 yıl boyunca ücretsiz konsültasyon ve ömür boyu garanti.",
       contactTitle:"Ücretsiz konsültasyona kaydolun", contactDesc:"Uzmanımız sizinle iletişime geçip tüm sorularınızı yanıtlayacak.", contactBookBtn:"Randevu al",
-      tabHome:"Ana Sayfa", tabBooking:"Randevu", tabAI:"AI Asistan", tabRegister:"Kayıt", tabJobs:"Kariyer", tabLocation:"Konum",
+      tabHome:"Ana Sayfa", tabBooking:"Randevu", tabAI:"AI Asistan", tabRegister:"Kayıt", tabLocation:"Konum",
       aiHeaderTitle:"🤖 AI Asistan", aiHeaderDesc:"Sorunuzu yazın — saç ekimi hakkında tavsiye vereceğim",
       aiInitMsg:"Merhaba! 🌿 Ben Estet Clinic'in AI asistanıyım. Saç ekimi ile ilgili sorularınızı yanıtlarım. Size nasıl yardımcı olabilirim?",
       chipPrices:"💰 Fiyatlar", chipConsult:"📅 Konsültasyon", chipPain:"💉 Ağrılı mı olur?", chipHandoff:"👤 Bir yetkiliyle konuş",
@@ -730,7 +712,6 @@
       chatPlaceholder:"Mesaj yazın...", chatErrorGeneric:"Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.",
       chatErrorNetwork:"İnternet bağlantısında sorun var. Lütfen tekrar deneyin ya da +998 97 308-09-99 numarasını arayın.",
       askPackageTemplate:"{name} paketi hakkında detaylı bilgi verin",
-      jobsTitle:"Kariyer fırsatları yakında", jobsDesc:"Şu anda açık pozisyon yok. Yeni ilanlar burada paylaşılacak — takipte kalın!",
       locEyebrow:"Konum", locTitle:"Buhara, Okmasjid Caddesi 8/5", locDesc:"Klinik her gün 08:30 — 18:00 saatleri arasında açıktır. Başka şehirden gelen misafirler için yakın oteller aşağıda listelenmiştir.",
       locOpenRoute:"Yol tarifini aç", hotelsEyebrow:"Yakın Oteller", hotelsTitle:"Kliniğe yakın konaklama yerleri",
       hotelNote:"Fiyatlar sezona ve doluluğa göre değişir — kesin fiyatı telefonla sorabilirsiniz.",
@@ -763,7 +744,7 @@
       step3Title:"Амалиёт", step3Desc:"Бо усули муосир, бедард ва дар як рӯз.",
       step4Title:"Назорат ва натиҷа", step4Desc:"Дар давоми 1 сол машварати ройгон ва кафолати умрбод.",
       contactTitle:"Ба машварати ройгон навишта шавед", contactDesc:"Мутахассиси мо бо шумо тамос гирифта, ба ҳамаи саволҳоятон ҷавоб медиҳад.", contactBookBtn:"Бронь кардан",
-      tabHome:"Саҳифаи асосӣ", tabBooking:"Бронь", tabAI:"Ёрдамчии AI", tabRegister:"Рӯйхат", tabJobs:"Ҷои кор", tabLocation:"Суроға",
+      tabHome:"Саҳифаи асосӣ", tabBooking:"Бронь", tabAI:"Ёрдамчии AI", tabRegister:"Рӯйхат", tabLocation:"Суроға",
       aiHeaderTitle:"🤖 Ёрдамчии AI", aiHeaderDesc:"Саволатонро нависед — оид ба шинондани мӯй маслиҳат медиҳам",
       aiInitMsg:"Ассалому алайкум! 🌿 Ман ёрдамчии AI-и Estet Clinic ҳастам. Ба саволҳои шумо оид ба шинондани мӯй ҷавоб медиҳам. Чӣ гуна ба шумо кӯмак карда метавонам?",
       chipPrices:"💰 Нархҳо", chipConsult:"📅 Машварат", chipPain:"💉 Дардовар мешавад?", chipHandoff:"👤 Бо оператор гап задан",
@@ -774,7 +755,6 @@
       chatPlaceholder:"Паём нависед...", chatErrorGeneric:"Мебахшед, хатогӣ рух дод. Аз нав кӯшиш кунед.",
       chatErrorNetwork:"Мушкилот бо пайвасти интернет. Лутфан аз нав кӯшиш кунед ё ба рақами +998 97 308-09-99 занг занед.",
       askPackageTemplate:"Дар бораи пакети {name} муфассал нақл кунед",
-      jobsTitle:"Ҷойҳои кор ба наздикӣ", jobsDesc:"Ҳозир ҷои кори холӣ нест. Эълонҳои нав дар ин ҷо гузошта мешаванд — пайгирӣ кунед!",
       locEyebrow:"Суроға", locTitle:"Бухоро, кӯчаи Оқмасҷид 8/5", locDesc:"Клиника ҳар рӯз аз соати 08:30 то 18:00 кор мекунад. Барои меҳмонони аз шаҳрҳои дигар омада рӯйхати меҳмонхонаҳои наздик дар поён оварда шудааст.",
       locOpenRoute:"Кушодани масир", hotelsEyebrow:"Меҳмонхонаҳои наздик", hotelsTitle:"Ҷойҳои истиқомат дар наздикии клиника",
       hotelNote:"Нархҳо вобаста ба мавсим ва бандии утоқҳо тағйир меёбанд — нархи дақиқро тавассути телефон пурсида метавонед.",
